@@ -106,6 +106,7 @@ or:
  use Log::Any::App '$log';
  BEGIN {
      $Log_Level = 'fatal'; # setting to fatal
+     $Log_Level = 'off';   # setting to off
      # $Quiet = 1;         # another way, setting to error
      # $Log_Level= 'warn'; # setting to warn, default
      # $Verbose = 1;       # another way, setting to info
@@ -116,7 +117,8 @@ or:
 or from environment variable:
 
  LOG_LEVEL=fatal yourprogram.pl;   # setting level to fatal
- QUIET=1 yourproogram.pl;          # another way, setting to error
+ LOG_LEVEL=off yourprogram.pl;     # setting level to off
+ QUIET=1 yourprogram.pl;           # another way, setting to error
  LOG_LEVEL=warn yourprogram.pl;    # setting level to warn, default
  VERBOSE=1 yourprogram.pl;         # another way, setting to info
  DEBUG=1 yourprogram.pl;           # another way, setting to debug
@@ -426,8 +428,9 @@ sub _init_log4perl {
         my $cat = _format_category($_->{category});
         my $a = "DIR" . ($i++);
         $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-        push @{ $cats{$cat}{appenders} }, $a;
+        next if $_->{level} eq 'off';
         $cats{$cat}{level} = _max_level($cats{$cat}{level}, $_->{level});
+        push @{ $cats{$cat}{appenders} }, $a;
         $config_appenders .= join(
             "",
             "log4perl.appender.$a = Log::Dispatch::Dir\n",
@@ -446,14 +449,15 @@ sub _init_log4perl {
         my $cat = _format_category($_->{category});
         my $a = "FILE" . ($i++);
         $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-        push @{ $cats{$cat}{appenders} }, $a;
+        next if $_->{level} eq 'off';
         $cats{$cat}{level} = _max_level($cats{$cat}{level}, $_->{level});
+        push @{ $cats{$cat}{appenders} }, $a;
         $config_appenders .= join(
             "",
             "log4perl.appender.$a = Log::Dispatch::FileRotate\n",
             "log4perl.appender.$a.mode = append\n",
             "log4perl.appender.$a.filename = $_->{path}\n",
-            ($_->{max_size} ? "log4perl.appender.$a.size = " . ($_->{max_size}/1024/1024) . "\n" : ""),
+            ($_->{max_size} ? "log4perl.appender.$a.size = " . ($_->{max_size}) . "\n" : ""),
             ($_->{histories} ? "log4perl.appender.$a.max = " . ($_->{histories}+1) . "\n" : ""),
             "log4perl.appender.$a.layout = PatternLayout\n",
             "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
@@ -465,8 +469,9 @@ sub _init_log4perl {
         my $cat = _format_category($_->{category});
         my $a = "SCREEN" . ($i++);
         $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-        push @{ $cats{$cat}{appenders} }, $a;
+        next if $_->{level} eq 'off';
         $cats{$cat}{level} = _max_level($cats{$cat}{level}, $_->{level});
+        push @{ $cats{$cat}{appenders} }, $a;
         $config_appenders .= join(
             "",
             "log4perl.appender.$a = Log::Log4perl::Appender::" . ($_->{color} ? "ScreenColoredLevels" : "Screen") . "\n",
@@ -481,8 +486,9 @@ sub _init_log4perl {
         my $cat = _format_category($_->{category});
         my $a = "SYSLOG" . ($i++);
         $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-        push @{ $cats{$cat}{appenders} }, $a;
+        next if $_->{level} eq 'off';
         $cats{$cat}{level} = _max_level($cats{$cat}{level}, $_->{level});
+        push @{ $cats{$cat}{appenders} }, $a;
         $config_appenders .= join(
             "",
             "log4perl.appender.$a = Log::Dispatch::Syslog\n",
@@ -817,7 +823,7 @@ sub _format_category {
 
 sub _check_level {
     my ($level, $from) = @_;
-    $level =~ /^(fatal|error|warn|info|debug|trace)$/i or die "Unknown level (from $from): $level";
+    $level =~ /^(off|fatal|error|warn|info|debug|trace)$/i or die "Unknown level (from $from): $level";
     lc($1);
 }
 
@@ -910,7 +916,7 @@ sub _find_level {
 # return the higher level (e.g. _max_level("debug", "INFO") -> INFO
 sub _max_level {
     my ($l1, $l2) = @_;
-    my %vals = (FATAL=>1, ERROR=>2, WARN=>3, INFO=>4, DEBUG=>5, TRACE=>6);
+    my %vals = (OFF=>0, FATAL=>1, ERROR=>2, WARN=>3, INFO=>4, DEBUG=>5, TRACE=>6);
     $vals{uc($l1)} > $vals{uc($l2)} ? $l1 : $l2;
 }
 

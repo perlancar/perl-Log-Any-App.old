@@ -1,5 +1,12 @@
 Revision history for Log-Any-App
 
+0.14     2010-07-21
+         - Fixed: Unit for FileRotate max_size is not in MB but bytes.
+
+0.13     2010-07-21
+         - Allow turning off each facility via FILE_LOG_LEVEL=off,
+           SCREEN_LOG_LEVEL=off, and so on.
+
 0.12     2010-05-07
          - Switch to DZP::AutoPrereq (but DZP::MinimumPerl failed)
 
