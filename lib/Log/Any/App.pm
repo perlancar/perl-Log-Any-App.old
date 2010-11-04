@@ -193,9 +193,8 @@ Change the program name. Default is taken from $0.
 
 =item -level => 'trace'|'debug'|'info'|'warn'|'error'|'fatal'|'off'
 
-Specify log level for all outputs, e.g. C<warn>, C<debug>, etc. Each
-output can override this value. The default log level is determined as
-follow:
+Specify log level for all outputs. Each output can override this value. The
+default log level is determined as follow:
 
 If L<App::Options> is present, these keys are checked in
 B<%App::options>: B<log_level>, B<trace> (if true then level is
@@ -1026,6 +1025,22 @@ convenience, e.g. debugf() et al which can dump data structures,
 The usual way as with Log::Any:
 
  my $other_log = Log::Any->get_logger(category => $category);
+
+=head2 How do I set default level for certain output, but allow this to be overriden in environment/command line?
+
+If you set level as an argument to init, i.e.:
+
+ use Log::Any::App -screen => {level=>'off'};
+
+then you will not be able to override this via environment/command line, because
+init argument takes precedence. However, if yo do this:
+
+ use Log::Any::App; # screen log level is default
+ BEGIN { our $Screen_Log_Level = 'off' }
+
+then you will be able to override the screen log level using environment
+SCREEN_LOG_LEVEL (or SCREEN_DEBUG=1, and so on) or command-line
+--screen-log-level (or --screen-debug, and so on).
 
 =head2 How do I see the Log4perl configuration that gets used?
 
