@@ -183,9 +183,9 @@ Arguments to init can be one or more of:
 
 =item -init => BOOL
 
-Default is true. You can set this to false, and you can initialize
-Log4perl yourself (but then there's not much point in using this
-module, right?)
+Whether to call Log::Log4perl->init() after setting up the Log4perl
+configuration. Default is true. You can set this to false, and you can initialize
+Log4perl yourself (but then there's not much point in using this module, right?)
 
 =item -name => STRING
 
