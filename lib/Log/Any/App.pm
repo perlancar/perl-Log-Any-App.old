@@ -639,7 +639,7 @@ sub _is_daemon {
 
 sub _default_file {
     my ($spec) = @_;
-    my $level = _find_level("file");
+    my $level = _find_level("file", "file");
     if (!$level) {
         $level = $spec->{level};
         _debug("Setting level of file to general level ($level)");
@@ -685,7 +685,7 @@ sub _parse_opt_file {
 
 sub _default_dir {
     my ($spec) = @_;
-    my $level = _find_level("dir");
+    my $level = _find_level("dir", "dir");
     if (!$level) {
         $level = $spec->{level};
         _debug("Setting level of dir to general level ($level)");
@@ -733,7 +733,7 @@ sub _parse_opt_dir {
 
 sub _default_screen {
     my ($spec) = @_;
-    my $level = _find_level("screen");
+    my $level = _find_level("screen", "screen");
     if (!$level) {
         $level = $spec->{level};
         _debug("Setting level of screen to general level ($level)");
@@ -769,7 +769,7 @@ sub _parse_opt_screen {
 
 sub _default_syslog {
     my ($spec) = @_;
-    my $level = _find_level("syslog");
+    my $level = _find_level("syslog", "syslog");
     if (!$level) {
         $level = $spec->{level};
         _debug("Setting level of syslog to general level ($level)");
