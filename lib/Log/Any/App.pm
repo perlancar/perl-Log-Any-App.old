@@ -834,7 +834,6 @@ sub _set_level {
     my $F_ = $prefix ? ucfirst("${prefix}_") : "";
     my $pd = $prefix ? "${prefix}-" : "";
     my $pr = $prefix ? qr/$prefix(_|-)/ : qr//;
-    my $key;
     my ($level, $from);
 
     my @label2level =([trace=>"trace"], [debug=>"debug"], [verbose=>"info"], [quiet=>"error"]);
@@ -842,15 +841,20 @@ sub _set_level {
   FIND:
     {
         if ($INC{"App/Options.pm"}) {
+            my $key;
             for (qw/log_level loglevel/) {
-                if ($App::options{$key = $p_ . $_}) {
+                $key = $p_ . $_;
+                _debug("Checking \$App::options{$key}: ", ($App::options{$key} // "(undef)"));
+                if ($App::options{$key}) {
                     $level = _check_level($App::options{$key}, "\$App::options{$key}");
                     $from = "\$App::options{$key}";
                     last FIND;
                 }
             }
             for (@label2level) {
-                if ($App::options{$key = $p_ . $_->[0]}) {
+                $key = $p_ . $_->[0];
+                _debug("Checking \$App::options{$key}: ", ($App::options{$key} // "(undef)"));
+                if ($App::options{$key}) {
                     $level = $_->[1];
                     $from = "\$App::options{$key}";
                     last FIND;
@@ -859,15 +863,23 @@ sub _set_level {
         }
 
         my $i = 0;
+        _debug("Checking \@ARGV ...");
         while ($i < @ARGV) {
             my $arg = $ARGV[$i];
             $from = "cmdline arg $arg";
-            do { $level = _check_level($1, "ARGV $arg"); last FIND }
-                if $arg =~ /^--${pr}log[_-]?level=(.+)/;
-            do { $level = _check_level($ARGV[$i+1], "ARGV $arg ".$ARGV[$i+1]); last FIND }
-                if $arg =~ /^--${pr}log[_-]?level$/ and $i < @ARGV-1;
+            if ($arg =~ /^--${pr}log[_-]?level=(.+)/) {
+                _debug("\$ARGV[$i] looks like an option to specify level: $arg");
+                $level = _check_level($1, "ARGV $arg");
+                last FIND;
+            }
+            if ($arg =~ /^--${pr}log[_-]?level$/ and $i < @ARGV-1) {
+                _debug("\$ARGV[$i] and \$ARGV[${\($i+1)}] looks like an option to specify level: $arg ", $ARGV[$i+1]);
+                $level = _check_level($ARGV[$i+1], "ARGV $arg ".$ARGV[$i+1]);
+                last FIND;
+            }
             for (@label2level) {
                 if ($arg =~ /^--${pr}$_->[0](=(1|yes|true))?$/i) {
+                    _debug("\$ARGV[$i] looks like an option to specify level: $arg");
                     $level = $_->[1];
                     last FIND;
                 }
@@ -876,14 +888,18 @@ sub _set_level {
         }
 
         for (qw/LOG_LEVEL LOGLEVEL/) {
-            if ($ENV{$key = $P_ . $_}) {
+            my $key = $P_ . $_;
+            _debug("Checking environment variable $key: ", ($ENV{$key} // "(undef)"));
+            if ($ENV{$key}) {
                 $level = _check_level($ENV{$key}, "ENV $key");
                 $from = "\$ENV{$key}";
                 last FIND;
             }
         }
         for (@label2level) {
-            if ($ENV{$key = $P_ . uc($_->[0])}) {
+            my $key = $P_ . uc($_->[0]);
+            _debug("Checking environment variable $key: ", ($ENV{$key} // "(undef)"));
+            if ($ENV{$key}) {
                 $level = $_->[1];
                 $from = "\$ENV{$key}";
                 last FIND;
@@ -893,18 +909,24 @@ sub _set_level {
         no strict 'refs';
         for ("${F_}Log_Level", "${P_}LOG_LEVEL", "${p_}log_level",
              "${F_}LogLevel",  "${P_}LOGLEVEL",  "${p_}loglevel") {
-            if (($key = "main::$_") && $$key) {
-                $from = "\$$key";
-                $level = _check_level($$key, "\$$key");
+            my $varname = "main::$_";
+            _debug("Checking variable \$$varname: ", ($$varname // "(undef)"));
+            if ($$varname) {
+                $from = "\$$varname";
+                $level = _check_level($$varname, "\$$varname");
                 last FIND;
             }
         }
         for (@label2level) {
-            if (($key = "main::$F_" . ucfirst($_->[0])) && $$key ||
-                ($key = "main::$P_" . uc($_->[0])) && $$key) {
-                $from = "\$$key";
-                $level = $_->[1];
-                last FIND;
+            for my $varname (
+                "main::$F_" . ucfirst($_->[0]),
+                "main::$P_" . uc($_->[0])) {
+                _debug("Checking variable \$$varname: ", ($$varname // "(undef)"));
+                if ($$varname) {
+                    $from = "\$$varname";
+                    $level = $_->[1];
+                    last FIND;
+                }
             }
         }
     }
