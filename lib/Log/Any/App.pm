@@ -1015,11 +1015,11 @@ Users of your modules can still use Log::Dispatch or some other
 adapter if they want to. You are not forcing your module users to use
 Log4perl.
 
-Btw, I'm actually fine with a Log4perl-only world. It's just that
-(currently) you need to explicitly initialize Log4perl so this might
-irritate my users if I use Log4perl in my modules. Log::Any's default
-is the nice 'null' logging so my users don't need to be aware of
-logging at all.
+Btw, I'm actually fine with a Log4perl-only world. It's just that (currently) you
+need to explicitly initialize Log4perl so this might irritate my users if I use
+Log4perl in my modules. Log::Any's default is the nice 'null' logging so my users
+don't need to be aware of logging at all. And Log::Any also provides some other
+convenience, e.g. debugf() et al which can dump data structures,
 
 =head2 How do I create extra logger objects?
 
@@ -1032,6 +1032,13 @@ The usual way as with Log::Any:
 Set environment LOGANYAPP_DEBUG to true, and Log::Any::App will dump
 the Log4perl configuration as well as additional messages to help you
 trace how it came up to be.
+
+=head2 My needs are not met by the simple configuration system of Log::Any::App!
+
+You can use Log4perl adapter directly and write your own Log4perl configuration.
+Log::Any::App is meant for quick and simple logging output needs anyway (but do
+tell me if your logging output needs are reasonably simple and should be
+supported by Log::Any::App).
 
 =head1 BUGS/TODOS
 
