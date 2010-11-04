@@ -80,7 +80,7 @@ my %PATTERN_STYLES = (
     syslog            => '[pid %p] %m',
 );
 
-=head1 USING
+=head1 USING AND EXAMPLES
 
 Most of the time you just need to do this from command line:
 
@@ -139,6 +139,15 @@ If you want to add a second file with a different level and category:
 If you want to turn off screen logging:
 
  use Log::Any::App -screen => 0;
+
+Or, to turn screen logging off but allow environment and command line to
+override/enable it later, you can do:
+
+ use Log::Any::App;
+ BEGIN { $Screen_Log_Level = 'off' }
+
+If you then want to enable screen logging temporarily, you can call the script
+with --screen-log-level=debug or set environment SCREEN_VERBOSE=1, etc.
 
 Logging to syslog is enabled by default if your script looks like a
 daemon, e.g.:
