@@ -191,7 +191,7 @@ Log4perl yourself (but then there's not much point in using this module, right?)
 
 Change the program name. Default is taken from $0.
 
-=item -level => 'debug'|'warn'|...
+=item -level => 'trace'|'debug'|'info'|'warn'|'error'|'fatal'|'off'
 
 Specify log level for all outputs, e.g. C<warn>, C<debug>, etc. Each
 output can override this value. The default log level is determined as
