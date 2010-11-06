@@ -318,6 +318,9 @@ variables in main are also searched first (for B<SCREEN_LOG_LEVEL>,
 B<SCREEN_TRACE>, B<SCREEN_DEBUG>, B<SCREEN_VERBOSE>, B<SCREEN_QUIET>,
 and the similars).
 
+Color can also be turned on/off using environment variable COLOR (if B<color>
+argument is not set).
+
 =item -syslog => 0 | 1|yes|true | {opts}
 
 Log messages using L<Log::Dispatch::Syslog>.
@@ -747,7 +750,7 @@ sub _default_screen {
         _debug("Setting level of screen to general level ($level)");
     }
     return {
-        color => (-t STDOUT),
+        color => $ENV{COLOR} // (-t STDOUT),
         stderr => 1,
         level => $level,
         category => '',
