@@ -582,10 +582,10 @@ sub _parse_opts {
     $spec->{level} = _set_level("", "");
     if (!$spec->{level} && defined($opts{level})) {
         $spec->{level} = _check_level($opts{level}, "-level");
-        _debug("Setting general level to $spec->{level} (from -level)");
+        _debug("Set general level to $spec->{level} (from -level)");
     } elsif (!$spec->{level}) {
         $spec->{level} = "warn";
-        _debug("Setting general level to $spec->{level} (default)");
+        _debug("Set general level to $spec->{level} (default)");
     }
     delete $opts{level};
 
@@ -653,7 +653,7 @@ sub _default_file {
     my $level = _set_level("file", "file");
     if (!$level) {
         $level = $spec->{level};
-        _debug("Setting level of file to general level ($level)");
+        _debug("Set level of file to general level ($level)");
     }
     return {
         level => $level,
@@ -699,7 +699,7 @@ sub _default_dir {
     my $level = _set_level("dir", "dir");
     if (!$level) {
         $level = $spec->{level};
-        _debug("Setting level of dir to general level ($level)");
+        _debug("Set level of dir to general level ($level)");
     }
     return {
         level => $level,
@@ -747,7 +747,7 @@ sub _default_screen {
     my $level = _set_level("screen", "screen");
     if (!$level) {
         $level = $spec->{level};
-        _debug("Setting level of screen to general level ($level)");
+        _debug("Set level of screen to general level ($level)");
     }
     return {
         color => $ENV{COLOR} // (-t STDOUT),
@@ -783,7 +783,7 @@ sub _default_syslog {
     my $level = _set_level("syslog", "syslog");
     if (!$level) {
         $level = $spec->{level};
-        _debug("Setting level of syslog to general level ($level)");
+        _debug("Set level of syslog to general level ($level)");
     }
     return {
         level => $level,
@@ -816,13 +816,14 @@ sub _parse_opt_syslog {
 
 sub _set_pattern {
     my ($s, $name) = @_;
+    _debug("Setting $name pattern ...");
     unless (defined($s->{pattern})) {
         die "BUG: neither pattern nor pattern_style is defined ($name)"
             unless defined($s->{pattern_style});
         die "Unknown pattern style for $name `$s->{pattern_style}`, use one of: ".join(", ", keys %PATTERN_STYLES)
             unless defined($PATTERN_STYLES{ $s->{pattern_style} });
         $s->{pattern} = $PATTERN_STYLES{ $s->{pattern_style} };
-        _debug("Setting $name pattern to `$s->{pattern}` (from style `$s->{pattern_style}`)");
+        _debug("Set $name pattern to `$s->{pattern}` (from style `$s->{pattern_style}`)");
     }
 }
 
@@ -849,6 +850,7 @@ sub _set_level {
 
     my @label2level =([trace=>"trace"], [debug=>"debug"], [verbose=>"info"], [quiet=>"error"]);
 
+    _debug("Setting ", ($which ? "level of $which" : "general level"), " ...");
   SET:
     {
         if ($INC{"App/Options.pm"}) {
@@ -942,7 +944,7 @@ sub _set_level {
         }
     }
 
-    _debug("Setting ", ($which ? "level of $which" : "general level"), " to $level (from $from)") if $level;
+    _debug("Set ", ($which ? "level of $which" : "general level"), " to $level (from $from)") if $level;
     return $level;
 }
 
