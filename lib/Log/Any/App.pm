@@ -432,7 +432,9 @@ sub _init_log4perl {
         make_path($dir) if length($dir) && !(-d $dir);
     }
 
-    my $config_appenders = '';
+    my $config_filters = {};
+    my $config_appenders = {};
+
     my %cats = ('' => {appenders => [], level => $spec->{level}});
     my $i = 0;
     for (@{ $spec->{dirs} }) {
@@ -442,7 +444,7 @@ sub _init_log4perl {
         next if $_->{level} eq 'off';
         $cats{$cat}{level} = _max_level($cats{$cat}{level}, $_->{level});
         push @{ $cats{$cat}{appenders} }, $a;
-        $config_appenders .= join(
+        $config_appenders->{$a} = {spec => $_, category => $cat, config => join(
             "",
             "log4perl.appender.$a = Log::Dispatch::Dir\n",
             "log4perl.appender.$a.dirname = $_->{path}\n",
@@ -452,8 +454,7 @@ sub _init_log4perl {
             ($_->{max_age} ? "log4perl.appender.$a.max_age = $_->{max_age}\n" : ""),
             "log4perl.appender.$a.layout = PatternLayout\n",
             "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
-            "\n",
-        );
+        )};
     }
     $i = 0;
     for (@{ $spec->{files} }) {
@@ -463,7 +464,7 @@ sub _init_log4perl {
         next if $_->{level} eq 'off';
         $cats{$cat}{level} = _max_level($cats{$cat}{level}, $_->{level});
         push @{ $cats{$cat}{appenders} }, $a;
-        $config_appenders .= join(
+        $config_appenders->{$a} = {spec => $_, category => $cat, config => join(
             "",
             "log4perl.appender.$a = Log::Dispatch::FileRotate\n",
             "log4perl.appender.$a.mode = append\n",
@@ -472,8 +473,7 @@ sub _init_log4perl {
             ($_->{histories} ? "log4perl.appender.$a.max = " . ($_->{histories}+1) . "\n" : ""),
             "log4perl.appender.$a.layout = PatternLayout\n",
             "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
-            "\n",
-        );
+        )};
     }
     $i = 0;
     for (@{ $spec->{screens} }) {
@@ -483,14 +483,13 @@ sub _init_log4perl {
         next if $_->{level} eq 'off';
         $cats{$cat}{level} = _max_level($cats{$cat}{level}, $_->{level});
         push @{ $cats{$cat}{appenders} }, $a;
-        $config_appenders .= join(
+        $config_appenders->{$a} = {spec => $_, category => $cat, config => join(
             "",
             "log4perl.appender.$a = Log::Log4perl::Appender::" . ($_->{color} ? "ScreenColoredLevels" : "Screen") . "\n",
             ("log4perl.appender.$a.stderr = " . ($_->{stderr} ? 1 : 0) . "\n"),
             "log4perl.appender.$a.layout = PatternLayout\n",
             "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
-            "\n",
-        );
+        )};
     }
     $i = 0;
     for (@{ $spec->{syslogs} }) {
@@ -500,27 +499,56 @@ sub _init_log4perl {
         next if $_->{level} eq 'off';
         $cats{$cat}{level} = _max_level($cats{$cat}{level}, $_->{level});
         push @{ $cats{$cat}{appenders} }, $a;
-        $config_appenders .= join(
+        $config_appenders->{$a} = {spec => $_, category => $cat, config => join(
             "",
             "log4perl.appender.$a = Log::Dispatch::Syslog\n",
             "log4perl.appender.$a.ident = $_->{ident}\n",
             "log4perl.appender.$a.facility = $_->{facility}\n",
             "log4perl.appender.$a.layout = PatternLayout\n",
             "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
-            "\n",
-        );
+        )};
     }
+
+    # add filters to appender with level lower than the category level
+    for my $a (keys %$config_appenders) {
+        my $c = $config_appenders->{$a};
+        my $cat = $c->{category};
+        if ($cats{$cat}{level} ne $c->{spec}{level}) {
+            $c->{config} .= join(
+                "",
+                "log4perl.appender.$a.Filter = $a\n",
+            );
+            $config_filters->{$a} = {config => join(
+                "",
+                "log4perl.filter.$a = Log::Log4perl::Filter::LevelRange\n",
+                "log4perl.filter.$a.LevelMin = ", uc($c->{spec}{level}), "\n",
+                "log4perl.filter.$a.LevelMax = FATAL\n",
+            )};
+        }
+    }
+
     my $config_cats = '';
     for (sort {$a cmp $b} keys %cats) {
         my $c = $cats{$_};
         my $l = $_ eq '' ? "rootLogger" : "logger.$_";
         $config_cats .= "log4perl.$l = ".join(", ", uc($c->{level}), @{ $c->{appenders} })."\n";
     }
-    my $config = $config_cats . "\n" . $config_appenders;
+
+    my $config = join(
+        "",
+        "# categories\n",
+        $config_cats, "\n",
+        (keys %$config_filters ? "# filters\n" : ""),
+        join("", map { "$config_filters->{$_}{config}\n" }
+                 sort keys %$config_filters),
+        (keys %$config_appenders ? "# appenders\n" : ""),
+        join("", map { "$config_appenders->{$_}{config}\n" }
+                 sort keys %$config_appenders),
+    );
 
     if ($spec->{dump}) {
         print "Log::Any::App configuration:\n", Data::Dumper->new([$spec])->Terse(1)->Dump;
-        print "Log4perl configuration:\n", $config;
+        print "Log4perl configuration: <<EOC\n", $config, "EOC\n";
     }
 
     Log::Log4perl->init(\$config);
