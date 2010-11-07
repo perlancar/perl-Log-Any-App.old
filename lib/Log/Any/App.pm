@@ -849,7 +849,7 @@ sub _set_level {
 
     my @label2level =([trace=>"trace"], [debug=>"debug"], [verbose=>"info"], [quiet=>"error"]);
 
-  FIND:
+  SET:
     {
         if ($INC{"App/Options.pm"}) {
             my $key;
@@ -859,7 +859,7 @@ sub _set_level {
                 if ($App::options{$key}) {
                     $level = _check_level($App::options{$key}, "\$App::options{$key}");
                     $from = "\$App::options{$key}";
-                    last FIND;
+                    last SET;
                 }
             }
             for (@label2level) {
@@ -868,7 +868,7 @@ sub _set_level {
                 if ($App::options{$key}) {
                     $level = $_->[1];
                     $from = "\$App::options{$key}";
-                    last FIND;
+                    last SET;
                 }
             }
         }
@@ -881,18 +881,18 @@ sub _set_level {
             if ($arg =~ /^--${pr}log[_-]?level=(.+)/) {
                 _debug("\$ARGV[$i] looks like an option to specify level: $arg");
                 $level = _check_level($1, "ARGV $arg");
-                last FIND;
+                last SET;
             }
             if ($arg =~ /^--${pr}log[_-]?level$/ and $i < @ARGV-1) {
                 _debug("\$ARGV[$i] and \$ARGV[${\($i+1)}] looks like an option to specify level: $arg ", $ARGV[$i+1]);
                 $level = _check_level($ARGV[$i+1], "ARGV $arg ".$ARGV[$i+1]);
-                last FIND;
+                last SET;
             }
             for (@label2level) {
                 if ($arg =~ /^--${pr}$_->[0](=(1|yes|true))?$/i) {
                     _debug("\$ARGV[$i] looks like an option to specify level: $arg");
                     $level = $_->[1];
-                    last FIND;
+                    last SET;
                 }
             }
             $i++;
@@ -904,7 +904,7 @@ sub _set_level {
             if ($ENV{$key}) {
                 $level = _check_level($ENV{$key}, "ENV $key");
                 $from = "\$ENV{$key}";
-                last FIND;
+                last SET;
             }
         }
         for (@label2level) {
@@ -913,7 +913,7 @@ sub _set_level {
             if ($ENV{$key}) {
                 $level = $_->[1];
                 $from = "\$ENV{$key}";
-                last FIND;
+                last SET;
             }
         }
 
@@ -925,7 +925,7 @@ sub _set_level {
             if ($$varname) {
                 $from = "\$$varname";
                 $level = _check_level($$varname, "\$$varname");
-                last FIND;
+                last SET;
             }
         }
         for (@label2level) {
@@ -936,7 +936,7 @@ sub _set_level {
                 if ($$varname) {
                     $from = "\$$varname";
                     $level = $_->[1];
-                    last FIND;
+                    last SET;
                 }
             }
         }
