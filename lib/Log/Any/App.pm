@@ -51,9 +51,8 @@ also log using $log->debug(), etc as usual. Most of the time you don't
 need to configure anything as Log::Any::App will construct the most
 appropriate default Log4perl config for your application.
 
-I mostly use Log::Any;:App in scripts and one-liners whenever there
-are Log::Any-using modules involved (like L<Data::Schema> or
-L<Config::Tree>).
+I mostly use Log::Any;:App in simple scripts and one-liners whenever there are
+Log::Any-using modules involved (like L<Data::Schema> or L<Config::Tree>).
 
 =cut
 
@@ -82,75 +81,146 @@ my %PATTERN_STYLES = (
 
 =head1 USING AND EXAMPLES
 
-Most of the time you just need to do this from command line:
+Using Log::Any::App is very easy. Most of the time you just need to do this from
+command line:
 
  % perl -MLog::Any::App -MModuleThatUsesLogAny -e ...
 
 or from a script:
 
- use Log::Any::App qw($log);
+ use ModuleThatUsesLogAny;
+ use Log::Any::App '$log';
 
-this will send logs to screen as well as file (~/$NAME.log or
-/var/log/$NAME.log if running as root). One-liners by default do not
-log to file. $NAME will be taken from $0, but can be changed using:
+This will send logs to screen as well as file (~/$SCRIPT_NAME.log or
+/var/log/$SCRIPT_NAME.log if running as root, command-line scripts by default do
+not log to file) with the default level of 'warn'. This means $log->error("foo")
+will display, while $log->info("bar") will not.
 
- use Log::Any::App '$log', -name => 'myprog';
+The 'use Log::Any::App' statement can be issued before or after the modules that
+use Log::Any, it doesn't matter. Logging will be initialized in the INIT phase.
 
-Default level is 'warn', but can be changed in several ways. From the
-code:
+=head2 Changing logging level
+
+Changing logging level can be done from the script or outside the script. From
+the script:
 
  use Log::Any::App '$log', -level => 'debug';
 
-or:
+but oftentimes what you want is changing level without modifying the script
+itself. So leave it to Log::Any::App to determine level:
+
+ use Log::Any::App '$log';
+
+and then you can use environment variable:
+
+ TRACE=1 script.pl;       # setting level to trace
+ DEBUG=1 script.pl;       # setting level to debug
+ VERBOSE=1 script.pl;     # setting level to info
+ QUIET=1 script.pl;       # setting level to error
+ LOG_LEVEL=... script.pl; # setting a specific log level
+
+or command-line options:
+
+ script.pl --trace
+ script.pl --debug
+ script.pl --verbose
+ script.pl --quiet
+ script.pl --log_level=debug;   # '--log-level debug' will also do
+
+Log::Any::App won't interfere with command-line processing modules like
+L<Getopt::Long> or L<App::Options>.
+
+=head2 Changing default level
+
+The default log level is 'warn'. You can change this using:
+
+ use Log::Any::App '$log';
+ BEGIN { our $Log_Level = 'info' }
+
+and then you can still use environment or command-line options to override the
+setting.
+
+=head2 Changing per-output level
+
+Logging level can also be specified on a per-output level. For example, if you
+want your script to be chatty on the screen but still logs to file at the default
+'warn' level:
+
+ SCREEN_VERBOSE=1 script.pl
+ SCREEN_DEBUG=1 script.pl
+ SCREEN_TRACE=1 script.pl
+ SCREEN_LOG_LEVEL=info script.pl
+
+ script.pl --screen_verbose
+ script.pl --screen-debug
+ script.pl --screen-trace=1
+ script.pl --screen-log-level=info
+ # and so on
+
+Similarly, to set only file level, use FILE_VERBOSE, FILE_LOG_LEVEL,
+--file-trace, etc.
+
+=head2 Setting default per-output level
+
+As with setting default level, you can also set default level on a per-output
+basis:
 
  use Log::Any::App '$log';
  BEGIN {
-     $Log_Level = 'fatal'; # setting to fatal
-     $Log_Level = 'off';   # setting to off
-     # $Quiet = 1;         # another way, setting to error
-     # $Log_Level= 'warn'; # setting to warn, default
-     # $Verbose = 1;       # another way, setting to info
-     # $Debug = 1;         # another way, setting to debug
-     # $Trace = 1;         # another way, setting to trace
+     our $Screen_Log_Level = 'off';
+     our $File_Quiet = 1; # setting level to 'error'
+     # and so on
  }
 
-or from environment variable:
+If a per-output level is not specifed, it will default to the general log level.
 
- LOG_LEVEL=fatal yourprogram.pl;   # setting level to fatal
- LOG_LEVEL=off yourprogram.pl;     # setting level to off
- QUIET=1 yourprogram.pl;           # another way, setting to error
- LOG_LEVEL=warn yourprogram.pl;    # setting level to warn, default
- VERBOSE=1 yourprogram.pl;         # another way, setting to info
- DEBUG=1 yourprogram.pl;           # another way, setting to debug
- TRACE=1 yourprogram.pl;           # another way, setting to trace
+=head2 Enabling/disabling output
 
-or, from the command line options:
+To disable a certain output, you can do this:
 
- yourprogram.pl --log-level debug
- yourprogram.pl --debug
- # and so on
+ use Log::Any::App '$log', -file => 0;
 
-If you want to add a second file with a different level and category:
+or:
 
- use Log::Any::App '$log', -file => ['first.log',
-                                     {path=>'second.log', level=>'debug',
-                                      category=>'Some::Category'}];
+ use Log::Any::App '$log', -screen => {level=>'off'};
 
-If you want to turn off screen logging:
-
- use Log::Any::App -screen => 0;
-
-Or, to turn screen logging off but allow environment and command line to
-override/enable it later, you can do:
+and this won't allow it to be reenabled from outside the script. However if you
+do this:
 
  use Log::Any::App;
- BEGIN { $Screen_Log_Level = 'off' }
+ BEGIN { our $Screen_Log_Level = 'off' }
 
-If you then want to enable screen logging temporarily, you can call the script
-with --screen-log-level=debug or set environment SCREEN_VERBOSE=1, etc.
+then you will be able to override the screen log level using environment or
+command-line options (SCREEN_DEBUG, --screen-verbose, and so on).
 
-Logging to syslog is enabled by default if your script looks like a
-daemon, e.g.:
+=head2 Changing log file name/location
+
+By default Log::Any::App will use ~/$NAME.log (or /var/log/$NAME.log if script is
+running as root), where $NAME taken from $0, but can be changed using:
+
+ use Log::Any::App '$log', -name => 'myprog';
+
+Or, using custom path:
+
+ use Log::Any::App '$log', -file => '/path/to/file';
+
+=head2 Changing other output parameters
+
+Each output argument can accept a hashref to specify various options. For
+example:
+
+ use Log::Any::App '$log',
+     -screen => {color=>0},   # never use color
+     -file   => {path=>'/var/log/foo',
+                 rotate=>'10M',
+                 histories=>10,
+                },
+
+For all the available options of each output, see the init() function.
+
+=head2 Logging to syslog
+
+Logging to syslog is enabled by default if your script looks like a daemon, e.g.:
 
  use Net::Daemon; # this indicate your program is a daemon
  use Log::Any::App; # syslog logging will be turned on by default
@@ -159,7 +229,54 @@ but if you don't want syslog logging:
 
  use Log::Any::App -syslog => 0;
 
-For all the available options, see the init() function.
+=head2 Logging to directory
+
+This is done using L<Log::Dispatch::Dir> where each log message is logged to a
+different file in a specified directory. By default logging to dir is not turned
+on, to turn it on:
+
+ use Log::Any::App '$log', -dir => 1;
+
+For all the available options of directory output, see the init() function.
+
+=head2 Multiple outputs
+
+Each output argument can accept an arrayref to specify more than one output,
+example:
+
+ use Log::Any::App '$log',
+     -file => ["/var/log/log1",
+               {path=>"/var/log/debug_foo", category=>'Foo', level=>'debug'}];
+
+=head2 Changing level of a certain module
+
+Suppose you want to shut up Foo, Bar::Baz, and Qux's logging because they are too
+noisy:
+
+ use Log::Any::App '$log',
+  -category_aliases => { -noisy => [qw/Foo Bar::Baz Qux/] },
+  -screen => [{category=>''},                     # use defaults
+              {category=>'-noisy', level=>'off'}, # silent this category
+             ],
+  -file   => [{category=>''},                     # use defaults
+              {category=>'-noisy', level=>'off'}, # silent this category
+             ];
+
+A nicer syntax might be considered for the future :-) As you might notice,
+Log4perl category-oriented configuration style might be better suited in these
+cases, where in simplistic Log::Any::App configuration you have to specify the
+category to each output.
+
+=head2 Preventing logging level to be changed from outside the script
+
+Sometimes, for security/audit reasons, you don't want to allow script caller to
+change logging level. To do so, just specify the 'level' option in the script
+during 'use' statement:
+
+=head2 Debugging
+
+To see the Log4perl configuration that is generated by Log::Any::App and how it
+came to be, set environment LOGANYAPP_DEBUG to true.
 
 
 =head1 FUNCTIONS
@@ -1058,28 +1175,6 @@ convenience, e.g. debugf() et al which can dump data structures,
 The usual way as with Log::Any:
 
  my $other_log = Log::Any->get_logger(category => $category);
-
-=head2 How do I set default level for certain output, but allow this to be overriden in environment/command line?
-
-If you set level as an argument to init, i.e.:
-
- use Log::Any::App -screen => {level=>'off'};
-
-then you will not be able to override this via environment/command line, because
-init argument takes precedence. However, if yo do this:
-
- use Log::Any::App; # screen log level is default
- BEGIN { our $Screen_Log_Level = 'off' }
-
-then you will be able to override the screen log level using environment
-SCREEN_LOG_LEVEL (or SCREEN_DEBUG=1, and so on) or command-line
---screen-log-level (or --screen-debug, and so on).
-
-=head2 How do I see the Log4perl configuration that gets used?
-
-Set environment LOGANYAPP_DEBUG to true, and Log::Any::App will dump
-the Log4perl configuration as well as additional messages to help you
-trace how it came up to be.
 
 =head2 My needs are not met by the simple configuration system of Log::Any::App!
 
