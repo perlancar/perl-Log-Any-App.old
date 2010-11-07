@@ -442,7 +442,7 @@ sub _init_log4perl {
         my $a = "DIR" . ($i++);
         $cats{$cat} ||= {appenders => [], level => $spec->{level}};
         next if $_->{level} eq 'off';
-        $cats{$cat}{level} = _max_level($cats{$cat}{level}, $_->{level});
+        $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
         push @{ $cats{$cat}{appenders} }, $a;
         $config_appenders->{$a} = {spec => $_, category => $cat, config => join(
             "",
@@ -462,7 +462,7 @@ sub _init_log4perl {
         my $a = "FILE" . ($i++);
         $cats{$cat} ||= {appenders => [], level => $spec->{level}};
         next if $_->{level} eq 'off';
-        $cats{$cat}{level} = _max_level($cats{$cat}{level}, $_->{level});
+        $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
         push @{ $cats{$cat}{appenders} }, $a;
         $config_appenders->{$a} = {spec => $_, category => $cat, config => join(
             "",
@@ -481,7 +481,7 @@ sub _init_log4perl {
         my $a = "SCREEN" . ($i++);
         $cats{$cat} ||= {appenders => [], level => $spec->{level}};
         next if $_->{level} eq 'off';
-        $cats{$cat}{level} = _max_level($cats{$cat}{level}, $_->{level});
+        $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
         push @{ $cats{$cat}{appenders} }, $a;
         $config_appenders->{$a} = {spec => $_, category => $cat, config => join(
             "",
@@ -497,7 +497,7 @@ sub _init_log4perl {
         my $a = "SYSLOG" . ($i++);
         $cats{$cat} ||= {appenders => [], level => $spec->{level}};
         next if $_->{level} eq 'off';
-        $cats{$cat}{level} = _max_level($cats{$cat}{level}, $_->{level});
+        $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
         push @{ $cats{$cat}{appenders} }, $a;
         $config_appenders->{$a} = {spec => $_, category => $cat, config => join(
             "",
@@ -976,11 +976,11 @@ sub _set_level {
     return $level;
 }
 
-# return the higher level (e.g. _max_level("debug", "INFO") -> INFO
-sub _max_level {
+# return the lower level (e.g. _min_level("debug", "INFO") -> INFO
+sub _min_level {
     my ($l1, $l2) = @_;
-    my %vals = (OFF=>0, FATAL=>1, ERROR=>2, WARN=>3, INFO=>4, DEBUG=>5, TRACE=>6);
-    $vals{uc($l1)} > $vals{uc($l2)} ? $l1 : $l2;
+    my %vals = (OFF=>99, FATAL=>6, ERROR=>5, WARN=>4, INFO=>3, DEBUG=>2, TRACE=>1);
+    $vals{uc($l1)} > $vals{uc($l2)} ? $l2 : $l1;
 }
 
 sub _export_logger {
