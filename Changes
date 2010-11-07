@@ -1,5 +1,15 @@
 Revision history for Log-Any-App
 
+0.18     2010-11-07
+
+         - *Fixed: Setting per-target level (again), previously setting
+            per-target level on a lower level didn't work.
+
+         - *New: Added 'exclude_category' option
+
+         - *Doc: Add examples
+
+
 0.17     2010-11-06
          - Doc updates.
          - Respect environment COLOR=0/1 to disable/enable screen color.
