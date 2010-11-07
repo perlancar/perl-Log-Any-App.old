@@ -71,6 +71,8 @@ use Log::Log4perl;
 # use Log::Dispatch::FileRotate
 # use Log::Dispatch::Syslog
 
+use vars qw($dbg_ctx);
+
 my %PATTERN_STYLES = (
     plain             => '%m',
     script_short      => '[%r] %m%n',
@@ -254,7 +256,7 @@ Suppose you want to shut up Foo, Bar::Baz, and Qux's logging because they are to
 noisy:
 
  use Log::Any::App '$log',
-  -category_aliases => { -noisy => [qw/Foo Bar::Baz Qux/] },
+  -category_alias => { -noisy => [qw/Foo Bar::Baz Qux/] },
   -screen => [{category=>''},                     # use defaults
               {category=>'-noisy', level=>'off'}, # silent this category
              ],
@@ -262,10 +264,10 @@ noisy:
               {category=>'-noisy', level=>'off'}, # silent this category
              ];
 
-A nicer syntax might be considered for the future :-) As you might notice,
+A nicer syntax might be considered for the future :-) (As you might notice,
 Log4perl category-oriented configuration style might be better suited in these
 cases, where in simplistic Log::Any::App configuration you have to specify the
-category to each output.
+category to each output.)
 
 =head2 Preventing logging level to be changed from outside the script
 
@@ -308,6 +310,25 @@ Log4perl yourself (but then there's not much point in using this module, right?)
 
 Change the program name. Default is taken from $0.
 
+=item -category_alias => {ALIAS=>CATEGORY, ...}
+
+Create category aliases so the ALIAS can be used in place of real categories in
+each output's category specification. For example, instead of doing this:
+
+ init(
+     -file   => [category=>[qw/Foo Bar Baz/], ...],
+     -screen => [category=>[qw/Foo Bar Baz/]],
+ );
+
+you can do this instead:
+
+ init(
+     -category_alias => {_fbb => [qw/Foo Bar Baz/]},
+     -file   => [category=>'-fbb', ...],
+     -screen => [category=>'-fbb', ...],
+ );
+
+
 =item -level => 'trace'|'debug'|'info'|'warn'|'error'|'fatal'|'off'
 
 Specify log level for all outputs. Each output can override this value. The
@@ -340,15 +361,15 @@ If everything fails, it defaults to 'warn'.
 Specify output to one or more files, using
 L<Log::Dispatch::FileRotate>.
 
-If the argument is a false boolean value, file logging will be turned
-off. If argument is a true value that matches /^(1|yes|true)$/i, file
-logging will be turned on with default path, etc. If the argument is
-another scalar value then it is assumed to be a path. If the argument
-is a hashref, then the keys of the hashref must be one of: C<level>,
-C<path>, C<max_size> (maximum size before rotating, in bytes, 0 means
-unlimited or never rotate), C<histories> (number of old files to keep,
-excluding the current file), C<category>, C<pattern_style> (see
-L<"PATTERN STYLES">), C<pattern> (Log4perl pattern).
+If the argument is a false boolean value, file logging will be turned off. If
+argument is a true value that matches /^(1|yes|true)$/i, file logging will be
+turned on with default path, etc. If the argument is another scalar value then it
+is assumed to be a path. If the argument is a hashref, then the keys of the
+hashref must be one of: C<level>, C<path>, C<max_size> (maximum size before
+rotating, in bytes, 0 means unlimited or never rotate), C<histories> (number of
+old files to keep, excluding the current file), C<category> (a string of ref to
+array of strings), C<pattern_style> (see L<"PATTERN STYLES">), C<pattern>
+(Log4perl pattern).
 
 If the argument is an arrayref, it is assumed to be specifying
 multiple files, with each element of the array as a hashref.
@@ -555,13 +576,9 @@ sub _init_log4perl {
     my %cats = ('' => {appenders => [], level => $spec->{level}});
     my $i = 0;
     for (@{ $spec->{dirs} }) {
-        my $cat = _format_category($_->{category});
-        my $a = "DIR" . ($i++);
-        $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-        next if $_->{level} eq 'off';
-        $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
-        push @{ $cats{$cat}{appenders} }, $a;
-        $config_appenders->{$a} = {spec => $_, category => $cat, config => join(
+        #next if $_->{level} eq 'off';
+        my $a = $_->{name};
+        $config_appenders->{$a} = {spec => $_, config => join(
             "",
             "log4perl.appender.$a = Log::Dispatch::Dir\n",
             "log4perl.appender.$a.dirname = $_->{path}\n",
@@ -572,16 +589,17 @@ sub _init_log4perl {
             "log4perl.appender.$a.layout = PatternLayout\n",
             "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
         )};
+        for my $cat (_extract_category($_)) {
+            $cats{$cat} ||= {appenders => [], level => $spec->{level}};
+            $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
+            push @{ $cats{$cat}{appenders} }, $a;
+        }
     }
     $i = 0;
     for (@{ $spec->{files} }) {
-        my $cat = _format_category($_->{category});
-        my $a = "FILE" . ($i++);
-        $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-        next if $_->{level} eq 'off';
-        $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
-        push @{ $cats{$cat}{appenders} }, $a;
-        $config_appenders->{$a} = {spec => $_, category => $cat, config => join(
+        #next if $_->{level} eq 'off';
+        my $a = $_->{name};
+        $config_appenders->{$a} = {spec => $_, config => join(
             "",
             "log4perl.appender.$a = Log::Dispatch::FileRotate\n",
             "log4perl.appender.$a.mode = append\n",
@@ -591,32 +609,34 @@ sub _init_log4perl {
             "log4perl.appender.$a.layout = PatternLayout\n",
             "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
         )};
+        for my $cat (_extract_category($_)) {
+            $cats{$cat} ||= {appenders => [], level => $spec->{level}};
+            $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
+            push @{ $cats{$cat}{appenders} }, $a;
+        }
     }
     $i = 0;
     for (@{ $spec->{screens} }) {
-        my $cat = _format_category($_->{category});
-        my $a = "SCREEN" . ($i++);
-        $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-        next if $_->{level} eq 'off';
-        $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
-        push @{ $cats{$cat}{appenders} }, $a;
-        $config_appenders->{$a} = {spec => $_, category => $cat, config => join(
+        #next if $_->{level} eq 'off';
+        my $a = $_->{name};
+        $config_appenders->{$a} = {spec => $_, config => join(
             "",
             "log4perl.appender.$a = Log::Log4perl::Appender::" . ($_->{color} ? "ScreenColoredLevels" : "Screen") . "\n",
             ("log4perl.appender.$a.stderr = " . ($_->{stderr} ? 1 : 0) . "\n"),
             "log4perl.appender.$a.layout = PatternLayout\n",
             "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
         )};
+        for my $cat (_extract_category($_)) {
+            $cats{$cat} ||= {appenders => [], level => $spec->{level}};
+            $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
+            push @{ $cats{$cat}{appenders} }, $a;
+        }
     }
     $i = 0;
     for (@{ $spec->{syslogs} }) {
-        my $cat = _format_category($_->{category});
-        my $a = "SYSLOG" . ($i++);
-        $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-        next if $_->{level} eq 'off';
-        $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
-        push @{ $cats{$cat}{appenders} }, $a;
-        $config_appenders->{$a} = {spec => $_, category => $cat, config => join(
+        #next if $_->{level} eq 'off';
+        my $a = $_->{name};
+        $config_appenders->{$a} = {spec => $_, config => join(
             "",
             "log4perl.appender.$a = Log::Dispatch::Syslog\n",
             "log4perl.appender.$a.ident = $_->{ident}\n",
@@ -624,22 +644,42 @@ sub _init_log4perl {
             "log4perl.appender.$a.layout = PatternLayout\n",
             "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
         )};
+        for my $cat (_extract_category($_)) {
+            $cats{$cat} ||= {appenders => [], level => $spec->{level}};
+            $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
+            push @{ $cats{$cat}{appenders} }, $a;
+        }
     }
 
     # add filters to appender with level lower than the category level
     for my $a (keys %$config_appenders) {
         my $c = $config_appenders->{$a};
         my $cat = $c->{category};
-        if ($cats{$cat}{level} ne $c->{spec}{level}) {
-            $c->{config} .= join(
+        my $different;
+        for (_extract_category($c->{spec})) {
+            do { $different++; last } if $_ ne $cats{$_}{level};
+        }
+        next unless $different;
+        $c->{config} .= join(
+            "",
+            "log4perl.appender.$a.Filter = $a\n",
+        );
+        if ($c->{spec}{level} eq 'off') {
+            $config_filters->{$a} = {config => join(
                 "",
-                "log4perl.appender.$a.Filter = $a\n",
-            );
+                "# turn off every level\n",
+                "log4perl.filter.$a = Log::Log4perl::Filter::LevelRange\n",
+                "log4perl.filter.$a.LevelMin = DEBUG\n",
+                "log4perl.filter.$a.LevelMax = FATAL\n",
+                "log4perl.filter.$a.AcceptOnMatch = false\n",
+            )};
+        } else {
             $config_filters->{$a} = {config => join(
                 "",
                 "log4perl.filter.$a = Log::Log4perl::Filter::LevelRange\n",
                 "log4perl.filter.$a.LevelMin = ", uc($c->{spec}{level}), "\n",
                 "log4perl.filter.$a.LevelMax = FATAL\n",
+                "log4perl.filter.$a.AcceptOnMatch = true\n",
             )};
         }
     }
@@ -710,6 +750,7 @@ sub _parse_opts {
         name => _basename($0),
         init => 1,
         dump => ($ENV{LOGANYAPP_DEBUG} ? 1:0),
+        category_aliases => {},
     };
 
     my $i = 0;
@@ -733,6 +774,13 @@ sub _parse_opts {
         _debug("Set general level to $spec->{level} (default)");
     }
     delete $opts{level};
+
+    if (defined $opts{category_alias}) {
+        die "category_alias must be a hashref"
+            unless ref($opts{category_alias}) eq 'HASH';
+        $spec->{category_aliases} = $opts{category_alias};
+        delete $opts{category_alias};
+    }
 
     if (defined $opts{init}) {
         $spec->{init} = $opts{init};
@@ -767,7 +815,7 @@ sub _parse_opts {
 
     if (keys %opts) {
         die "Unknown option(s) ".join(", ", keys %opts)." Known opts are: ".
-            "name, level, file, dir, screen, syslog, dump, init";
+            "name, level, category_alias, file, dir, screen, syslog, dump, init";
     }
 
     #use Data::Dumper; print Dumper $spec;
@@ -798,7 +846,7 @@ sub _default_file {
     my $level = _set_level("file", "file");
     if (!$level) {
         $level = $spec->{level};
-        _debug("Set level of file to general level ($level)");
+        _debug("Set level of file to $level (general level)");
     }
     return {
         level => $level,
@@ -816,7 +864,10 @@ sub _parse_opt_file {
     my ($spec, $arg) = @_;
     return unless $arg;
     if (!ref($arg) || ref($arg) eq 'HASH') {
+        my $name = "FILE".(@{ $spec->{files} }+0);
+        local $dbg_ctx = $name;
         push @{ $spec->{files} }, _default_file($spec);
+        $spec->{files}[-1]{name} = $name;
         if (!ref($arg)) {
             if ($arg =~ /^(1|yes|true)$/i) {
                 #
@@ -828,9 +879,11 @@ sub _parse_opt_file {
                 for ($spec->{files}[-1]) {
                     exists($_->{$k}) or die "Invalid file argument: $k, please only specify one of: " . join(", ", sort keys %$_);
                     $_->{$k} = $k eq 'level' ? _check_level($arg->{$k}, "-file") : $arg->{$k};
+                    _debug("Set level of file to $_->{$k} (spec)") if $k eq 'level';
                 }
             }
         }
+        $spec->{files}[-1]{main_spec} = $spec;
         _set_pattern($spec->{files}[-1], 'file');
     } elsif (ref($arg) eq 'ARRAY') {
         _parse_opt_file($spec, $_) for @$arg;
@@ -844,7 +897,7 @@ sub _default_dir {
     my $level = _set_level("dir", "dir");
     if (!$level) {
         $level = $spec->{level};
-        _debug("Set level of dir to general level ($level)");
+        _debug("Set level of dir to $level (general level)");
     }
     return {
         level => $level,
@@ -864,7 +917,10 @@ sub _parse_opt_dir {
     my ($spec, $arg) = @_;
     return unless $arg;
     if (!ref($arg) || ref($arg) eq 'HASH') {
+        my $name = "DIR".(@{ $spec->{dirs} }+0);
+        local $dbg_ctx = $name;
         push @{ $spec->{dirs} }, _default_dir($spec);
+        $spec->{dirs}[-1]{name} = $name;
         if (!ref($arg)) {
             if ($arg =~ /^(1|yes|true)$/i) {
                 #
@@ -876,9 +932,11 @@ sub _parse_opt_dir {
                 for ($spec->{dirs}[-1]) {
                     exists($_->{$k}) or die "Invalid dir argument: $k, please only specify one of: " . join(", ", sort keys %$_);
                     $_->{$k} = $k eq 'level' ? _check_level($arg->{$k}, "-dir") : $arg->{$k};
+                    _debug("Set level of dir to $_->{$k} (spec)") if $k eq 'level';
                 }
             }
         }
+        $spec->{dirs}[-1]{main_spec} = $spec;
         _set_pattern($spec->{dirs}[-1], 'dir');
     } elsif (ref($arg) eq 'ARRAY') {
         _parse_opt_dir($spec, $_) for @$arg;
@@ -892,7 +950,7 @@ sub _default_screen {
     my $level = _set_level("screen", "screen");
     if (!$level) {
         $level = $spec->{level};
-        _debug("Set level of screen to general level ($level)");
+        _debug("Set level of screen to $level (general level)");
     }
     return {
         color => $ENV{COLOR} // (-t STDOUT),
@@ -907,20 +965,29 @@ sub _default_screen {
 sub _parse_opt_screen {
     my ($spec, $arg) = @_;
     return unless $arg;
-    push @{ $spec->{screens} }, _default_screen($spec);
-    if (!ref($arg)) {
-        #
-    } elsif (ref($arg) eq 'HASH') {
-        for my $k (keys %$arg) {
-            for ($spec->{screens}[0]) {
-                exists($_->{$k}) or die "Invalid screen argument: $k, please only specify one of: " . join(", ", sort keys %$_);
-                $_->{$k} = $k eq 'level' ? _check_level($arg->{$k}, "-screen") : $arg->{$k};
+    if (!ref($arg) || ref($arg) eq 'HASH') {
+        my $name = "SCREEN".(@{ $spec->{screens} }+0);
+        local $dbg_ctx = $name;
+        push @{ $spec->{screens} }, _default_screen($spec);
+        $spec->{screens}[-1]{name} = $name;
+        if (!ref($arg)) {
+            #
+        } else {
+            for my $k (keys %$arg) {
+                for ($spec->{screens}[-1]) {
+                    exists($_->{$k}) or die "Invalid screen argument: $k, please only specify one of: " . join(", ", sort keys %$_);
+                    $_->{$k} = $k eq 'level' ? _check_level($arg->{$k}, "-screen") : $arg->{$k};
+                    _debug("Set level of screen to $_->{$k} (spec)") if $k eq 'level';
+                }
             }
         }
+        $spec->{screens}[-1]{main_spec} = $spec;
+        _set_pattern($spec->{screens}[-1], 'screen');
+    } elsif (ref($arg) eq 'ARRAY') {
+        _parse_opt_screen($spec, $_) for @$arg;
     } else {
-        die "Invalid argument for -screen, must be a boolean or hashref";
+        die "Invalid argument for -screen, must be a boolean or hashref or arrayref";
     }
-    _set_pattern($spec->{screens}[0], 'screen');
 }
 
 sub _default_syslog {
@@ -928,7 +995,7 @@ sub _default_syslog {
     my $level = _set_level("syslog", "syslog");
     if (!$level) {
         $level = $spec->{level};
-        _debug("Set level of syslog to general level ($level)");
+        _debug("Set level of syslog to $level (general level)");
     }
     return {
         level => $level,
@@ -943,20 +1010,29 @@ sub _default_syslog {
 sub _parse_opt_syslog {
     my ($spec, $arg) = @_;
     return unless $arg;
-    push @{ $spec->{syslogs} }, _default_syslog($spec);
-    if (!ref($arg)) {
-        #
-    } elsif (ref($arg) eq 'HASH') {
-        for my $k (keys %$arg) {
-            for ($spec->{syslogs}[0]) {
-                exists($_->{$k}) or die "Invalid syslog argument: $k, please only specify one of: " . join(", ", sort keys %$_);
-                $_->{$k} = $k eq 'level' ? _check_level($arg->{$k}, "-syslog") : $arg->{$k};
+    if (!ref($arg) || ref($arg) eq 'HASH') {
+        my $name = "SYSLOG".(@{ $spec->{syslogs} }+0);
+        local $dbg_ctx = $name;
+        push @{ $spec->{syslogs} }, _default_syslog($spec);
+        $spec->{syslogs}[-1]{name} = $name;
+        if (!ref($arg)) {
+            #
+        } else {
+            for my $k (keys %$arg) {
+                for ($spec->{syslogs}[-1]) {
+                    exists($_->{$k}) or die "Invalid syslog argument: $k, please only specify one of: " . join(", ", sort keys %$_);
+                    $_->{$k} = $k eq 'level' ? _check_level($arg->{$k}, "-syslog") : $arg->{$k};
+                    _debug("Set level of syslog to $_->{$k} (spec)") if $k eq 'level';
+                }
             }
         }
+        $spec->{screens}[-1]{main_spec} = $spec;
+        _set_pattern($spec->{syslogs}[-1], 'syslog');
+    } elsif (ref($arg) eq 'ARRAY') {
+        _parse_opt_syslog($spec, $_) for @$arg;
     } else {
-        die "Invalid argument for -syslog, must be a boolean or hashref";
+        die "Invalid argument for -syslog, must be a boolean or hashref or arrayref";
     }
-    _set_pattern($spec->{syslogs}[0], 'syslog');
 }
 
 sub _set_pattern {
@@ -972,10 +1048,28 @@ sub _set_pattern {
     }
 }
 
-sub _format_category {
-    my ($cat) = @_;
-    $cat =~ s/::/./g;
-    lc($cat);
+sub _extract_category {
+    my ($ospec) = @_;
+    my $c0 = $ospec->{category};
+    my @res;
+    if (ref($c0) eq 'ARRAY') { @res = @$c0 } else { @res = ($c0) }
+    # replace alias with real value
+    for (my $i=0; $i<@res; $i++) {
+        my $c1 = $res[$i];
+        my $a = $ospec->{main_spec}{category_aliases}{$c1};
+        next unless defined($a);
+        if (ref($a) eq 'ARRAY') {
+            splice @res, $i, 1, @$a;
+            $i += (@$a-1);
+        } else {
+            $res[$i] = $a;
+        }
+    }
+    for (@res) {
+        s/::/./g;
+        # $_ = lc; # XXX do we need this?
+    }
+    @res;
 }
 
 sub _check_level {
@@ -1109,7 +1203,9 @@ sub _export_logger {
 }
 
 sub _debug {
-    print @_, "\n" if $ENV{LOGANYAPP_DEBUG};
+    return unless $ENV{LOGANYAPP_DEBUG};
+    print $dbg_ctx, ": " if $dbg_ctx;
+    print @_, "\n";
 }
 
 sub import {
