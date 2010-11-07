@@ -2,12 +2,15 @@ Revision history for Log-Any-App
 
 0.18     2010-11-07
 
-         - Fixed: Setting per-output level (again), previously generated Log4perl
-           configuration didn't respect target with higher level setting.
+         - Fixed: Setting per-output level (again!), previously generated
+           Log4perl configuration didn't respect target with higher level
+           setting.
 
-         - *New: Added 'exclude_category' option
+         - *New: '-category_aliases' option
 
-         - *Doc: Add examples
+         - *New: 'category' in output spec now accepts array
+
+         - Doc: Rewritten usage & examples section
 
 
 0.17     2010-11-06
