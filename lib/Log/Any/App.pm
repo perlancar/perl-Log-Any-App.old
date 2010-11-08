@@ -567,118 +567,116 @@ sub init {
     _init_log4perl($spec);
 }
 
-sub _init_log4perl {
-    my ($spec) = @_;
+sub _add_appender_OUTPUT {
+    my (%args) = @_;
+    my $config = $args{config};
+    my $ospec = $args{ospec};
+    my $class = $args{class};
+    my $params = $args{params};
 
-    # create intermediate directories for dir
-    for (@{ $spec->{dirs} }) {
-        my $dir = _dirname($_->{path});
-        make_path($dir) if length($dir) && !(-d $dir);
-    }
+    #next if $ospec->{level} eq 'off';
 
-    # create intermediate directories for file
-    for (@{ $spec->{files} }) {
-        my $dir = _dirname($_->{path});
-        make_path($dir) if length($dir) && !(-d $dir);
-    }
-
-    my $config_filters = {};
-    my $config_appenders = {};
-
-    my %cats = ('' => {appenders => [], level => $spec->{level}});
-    my $i = 0;
-    for (@{ $spec->{dirs} }) {
-        #next if $_->{level} eq 'off';
-        my $a = $_->{name};
-        $config_appenders->{$a} = {spec => $_, config => join(
+    my $a = $ospec->{name};
+    $config->{appenders}{$a} = {ospec => $ospec, config => join(
             "",
-            "log4perl.appender.$a = Log::Dispatch::Dir\n",
-            "log4perl.appender.$a.dirname = $_->{path}\n",
-            "log4perl.appender.$a.filename_pattern = $_->{filename_pattern}\n",
-            ($_->{max_size} ? "log4perl.appender.$a.max_size = $_->{max_size}\n" : ""),
-            ($_->{histories} ? "log4perl.appender.$a.max_files = " . ($_->{histories}+1) . "\n" : ""),
-            ($_->{max_age} ? "log4perl.appender.$a.max_age = $_->{max_age}\n" : ""),
+            "log4perl.appender.$a = $class\n",
+            (map { "log4perl.appender.$a.$_ = $params->{$_}\n" } keys %$params),
             "log4perl.appender.$a.layout = PatternLayout\n",
-            "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
+            "log4perl.appender.$a.layout.ConversionPattern = $ospec->{pattern}\n",
         )};
-        for my $cat (_extract_category($_)) {
-            $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-            $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
-            push @{ $cats{$cat}{appenders} }, $a;
-        }
+
+    my $cats = $config->{categories};
+    for my $cat (_extract_category($_)) {
+        $cats->{$cat} ||= {appenders => [], level => $ospec->{level}};
+        $cats->{$cat}{level} = _min_level($cats->{$cat}{level}, $ospec->{level});
+        push @{ $cats->{$cat}{appenders} }, $a;
     }
-    $i = 0;
-    for (@{ $spec->{files} }) {
-        #next if $_->{level} eq 'off';
-        my $a = $_->{name};
-        $config_appenders->{$a} = {spec => $_, config => join(
-            "",
-            "log4perl.appender.$a = Log::Dispatch::FileRotate\n",
-            "log4perl.appender.$a.mode = append\n",
-            "log4perl.appender.$a.filename = $_->{path}\n",
-            ($_->{max_size} ? "log4perl.appender.$a.size = " . ($_->{max_size}) . "\n" : ""),
-            ($_->{histories} ? "log4perl.appender.$a.max = " . ($_->{histories}+1) . "\n" : ""),
-            "log4perl.appender.$a.layout = PatternLayout\n",
-            "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
-        )};
-        for my $cat (_extract_category($_)) {
-            $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-            $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
-            push @{ $cats{$cat}{appenders} }, $a;
-        }
-    }
-    $i = 0;
-    for (@{ $spec->{screens} }) {
-        #next if $_->{level} eq 'off';
-        my $a = $_->{name};
-        $config_appenders->{$a} = {spec => $_, config => join(
-            "",
-            "log4perl.appender.$a = Log::Log4perl::Appender::" . ($_->{color} ? "ScreenColoredLevels" : "Screen") . "\n",
-            ("log4perl.appender.$a.stderr = " . ($_->{stderr} ? 1 : 0) . "\n"),
-            "log4perl.appender.$a.layout = PatternLayout\n",
-            "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
-        )};
-        for my $cat (_extract_category($_)) {
-            $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-            $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
-            push @{ $cats{$cat}{appenders} }, $a;
-        }
-        if ($_->{category_level}) {
-            while (my ($k, $v) = each %{ $_->{category_level} }) {
-                for my $cat (_extract_category($_, $k)) {
-                    $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-                    $cats{$cat}{level} = _min_level($cats{$cat}{level}, $v);
-                    push @{ $cats{$cat}{appenders} }, $a;
-                }
+    if ($ospec->{category_level}) {
+        while (my ($k, $v) = each %{ $ospec->{category_level} }) {
+            for my $cat (_extract_category($ospec, $k)) {
+                $cats->{$cat} ||= {appenders => [], level => $ospec->{level}};
+                $cats->{$cat}{level} = _min_level($cats->{$cat}{level}, $v);
+                push @{ $cats->{$cat}{appenders} }, $a;
             }
         }
     }
-    $i = 0;
-    for (@{ $spec->{syslogs} }) {
-        #next if $_->{level} eq 'off';
-        my $a = $_->{name};
-        $config_appenders->{$a} = {spec => $_, config => join(
-            "",
-            "log4perl.appender.$a = Log::Dispatch::Syslog\n",
-            "log4perl.appender.$a.ident = $_->{ident}\n",
-            "log4perl.appender.$a.facility = $_->{facility}\n",
-            "log4perl.appender.$a.layout = PatternLayout\n",
-            "log4perl.appender.$a.layout.ConversionPattern = $_->{pattern}\n",
-        )};
-        for my $cat (_extract_category($_)) {
-            $cats{$cat} ||= {appenders => [], level => $spec->{level}};
-            $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
-            push @{ $cats{$cat}{appenders} }, $a;
-        }
-    }
+}
 
-    # add filters to appender with level lower than the category level
-    for my $a (keys %$config_appenders) {
-        my $c = $config_appenders->{$a};
+sub _add_appender_dir {
+    my ($config, $ospec) = @_;
+    my $params = {};
+
+    $params->{dirname}   = $ospec->{path};
+    $params->{filename_pattern} = $ospec->{filename_pattern};
+    $params->{max_size}  = $ospec->{max_size} if $ospec->{max_size};
+    $params->{max_files} = $ospec->{histories}+1 if $ospec->{histories};
+    $params->{max_age}   = $ospec->{max_age} if $ospec->{max_age};
+    _add_appender_OUTPUT(
+        ospec  => $ospec,
+        config => $config,
+        class  => "Log::Dispatch::Dir",
+        params => $params,
+    );
+}
+
+sub _add_appender_file {
+    my ($config, $ospec) = @_;
+    my $params = {};
+
+    $params->{mode}  = 'append';
+    $params->{filename} = $ospec->{path};
+    $params->{size}  = $ospec->{size} if $ospec->{size};
+    $params->{max}   = $ospec->{histories}+1 if $ospec->{histories};
+    _add_appender_OUTPUT(
+        ospec  => $ospec,
+        config => $config,
+        class  => "Log::Dispatch::FileRotate",
+        params => $params,
+    );
+}
+
+sub _add_appender_screen {
+    my ($config, $ospec) = @_;
+    my $params = {};
+
+    $params->{stderr}  = $ospec->{stderr} ? 1:0;
+    _add_appender_OUTPUT(
+        ospec  => $ospec,
+        config => $config,
+        class  => "Log::Log4perl::Appender::" .
+            ($ospec->{color} ? "ScreenColoredLevels" : "Screen"),
+        params => $params,
+    );
+}
+
+sub _add_appender_syslog {
+    my ($config, $ospec) = @_;
+    my $params = {};
+
+    $params->{mode}     = 'append';
+    $params->{ident}    = $ospec->{ident};
+    $params->{facility} = $ospec->{facility};
+    _add_appender_OUTPUT(
+        ospec  => $ospec,
+        config => $config,
+        class  => "Log::Dispatch::Syslog",
+        params => $params,
+    );
+}
+
+sub _add_filters {
+    my ($config) = @_;
+
+    my $cats      = $config->{categories};
+    my $appenders = $config->{appenders};
+    my $filters   = $config->{filters};
+
+    for my $a (keys %$appenders) {
+        my $c = $appenders->{$a};
         my $cat = $c->{category};
         my $different;
         for (_extract_category($c->{spec})) {
-            do { $different++; last } if $_ ne $cats{$_}{level};
+            do { $different++; last } if $_ ne $cats->{$_}{level};
         }
         next unless $different;
         $c->{config} .= join(
@@ -686,7 +684,7 @@ sub _init_log4perl {
             "log4perl.appender.$a.Filter = $a\n",
         );
         if ($c->{spec}{level} eq 'off') {
-            $config_filters->{$a} = {config => join(
+            $filters->{$a} = {config => join(
                 "",
                 "# turn off every level\n",
                 "log4perl.filter.$a = Log::Log4perl::Filter::LevelRange\n",
@@ -695,41 +693,92 @@ sub _init_log4perl {
                 "log4perl.filter.$a.AcceptOnMatch = false\n",
             )};
         } else {
-            $config_filters->{$a} = {config => join(
+            $filters->{$a} = {config => join(
                 "",
                 "log4perl.filter.$a = Log::Log4perl::Filter::LevelRange\n",
-                "log4perl.filter.$a.LevelMin = ", uc($c->{spec}{level}), "\n",
+                "log4perl.filter.$a.LevelMin = ", uc($c->{ospec}{level}), "\n",
                 "log4perl.filter.$a.LevelMax = FATAL\n",
                 "log4perl.filter.$a.AcceptOnMatch = true\n",
             )};
         }
     }
+}
 
-    my $config_cats = '';
-    for (sort {$a cmp $b} keys %cats) {
-        my $c = $cats{$_};
+sub _gen_l4p_config {
+    my ($config) = @_;
+
+    my $cats      = $config->{categories};
+    my $appenders = $config->{appenders};
+    my $filters   = $config->{filters};
+
+    my $cats_str = '';
+    for (sort {$a cmp $b} keys %$cats) {
+        my $c = $cats->{$_};
         my $l = $_ eq '' ? "rootLogger" : "logger.$_";
-        $config_cats .= "log4perl.$l = ".join(", ", uc($c->{level}), @{ $c->{appenders} })."\n";
+        $cats_str .= "log4perl.$l = ".
+            join(", ", uc($c->{level}), @{ $c->{appenders} })."\n";
     }
 
-    my $config = join(
+    join(
         "",
         "# categories\n",
-        $config_cats, "\n",
-        (keys %$config_filters ? "# filters\n" : ""),
-        join("", map { "$config_filters->{$_}{config}\n" }
-                 sort keys %$config_filters),
-        (keys %$config_appenders ? "# appenders\n" : ""),
-        join("", map { "$config_appenders->{$_}{config}\n" }
-                 sort keys %$config_appenders),
+        $cats_str, "\n",
+        (keys %$filters ? "# filters\n" : ""),
+        join("", map { "$filters->{$_}{config}\n" }
+                 sort keys %$filters),
+        (keys %$appenders ? "# appenders\n" : ""),
+        join("", map { "$appenders->{$_}{config}\n" }
+                 sort keys %$appenders),
     );
+}
 
-    if ($spec->{dump}) {
-        print "Log::Any::App configuration:\n", Data::Dumper->new([$spec])->Terse(1)->Dump;
-        print "Log4perl configuration: <<EOC\n", $config, "EOC\n";
+sub _init_log4perl {
+    my ($spec) = @_;
+
+    # create intermediate directories for dir
+    for (@{ $spec->{dir} }) {
+        my $dir = _dirname($_->{path});
+        make_path($dir) if length($dir) && !(-d $dir);
     }
 
-    Log::Log4perl->init(\$config);
+    # create intermediate directories for file
+    for (@{ $spec->{file} }) {
+        my $dir = _dirname($_->{path});
+        make_path($dir) if length($dir) && !(-d $dir);
+    }
+
+    my $l4p_config = {
+        filters => {},
+        appenders => {},
+        categories => {
+            '' => {appenders => [], level => $spec->{level}},
+        },
+    };
+
+    for (@{ $spec->{dir} }) {
+        _add_appender_dir($l4p_config, $_);
+    }
+    for (@{ $spec->{file} }) {
+        _add_appender_file($l4p_config, $_);
+    }
+    for (@{ $spec->{screen} }) {
+        _add_appender_screen($l4p_config, $_);
+    }
+    for (@{ $spec->{syslog} }) {
+        _add_appender_syslog($l4p_config, $_);
+    }
+
+    # add filters to appender with level lower than the category level
+    _add_filters($l4p_config);
+
+    my $config_str = _gen_l4p_config($l4p_config);
+    if ($spec->{dump}) {
+        print "Log::Any::App configuration:\n",
+            Data::Dumper->new([$spec])->Terse(1)->Dump;
+        print "Log4perl configuration: <<EOC\n", $config_str, "EOC\n";
+    }
+
+    Log::Log4perl->init(\$config_str);
     Log::Any::Adapter->set('Log4perl');
 }
 
@@ -799,7 +848,7 @@ sub _parse_opts {
     if (defined $opts{category_alias}) {
         die "category_alias must be a hashref"
             unless ref($opts{category_alias}) eq 'HASH';
-        $spec->{category_aliases} = $opts{category_alias};
+        $spec->{category_alias} = $opts{category_alias};
         delete $opts{category_alias};
     }
 
@@ -829,19 +878,19 @@ sub _parse_opts {
         delete $opts{dump};
     }
 
-    $spec->{files} = [];
+    $spec->{file} = [];
     _parse_opt_file($spec, $opts{file} // ($0 ne '-e' ? 1:0));
     delete $opts{file};
 
-    $spec->{dirs} = [];
+    $spec->{dir} = [];
     _parse_opt_dir($spec, $opts{dir} // 0);
     delete $opts{dir};
 
-    $spec->{screens} = [];
+    $spec->{screen} = [];
     _parse_opt_screen($spec, $opts{screen} // 1);
     delete $opts{screen};
 
-    $spec->{syslogs} = [];
+    $spec->{syslog} = [];
     _parse_opt_syslog($spec, $opts{syslog} // (_is_daemon()));
     delete $opts{syslog};
 
@@ -874,6 +923,46 @@ sub _is_daemon {
     0;
 }
 
+sub _parse_opt_OUTPUT {
+    my (%args) = @_;
+    my $kind = $args{kind};
+    my $default_sub = $args{default_sub};
+    my $spec = $args{spec};
+    my $arg = $args{arg};
+
+    return unless $arg;
+
+    if (!ref($arg) || ref($arg) eq 'HASH') {
+        my $name = uc($kind).(@{ $spec->{$kind} }+0);
+        local $dbg_ctx = $name;
+        push @{ $spec->{$kind} }, $default_sub->($spec);
+        $spec->{$kind}[-1]{name} = $name;
+        if (!ref($arg)) {
+            # leave every output parameter as is
+        } else {
+            for my $k (keys %$arg) {
+                for ($spec->{$kind}[-1]) {
+                    exists($_->{$k}) or die "Invalid $kind argument: $k, please".
+                        " only specify one of: " . join(", ", sort keys %$_);
+                    $_->{$k} = $k eq 'level' ?
+                        _check_level($arg->{$k}, "-$kind") : $arg->{$k};
+                    _debug("Set level of $kind to $_->{$k} (spec)")
+                        if $k eq 'level';
+                }
+            }
+        }
+        $spec->{$kind}[-1]{main_spec} = $spec;
+        _set_pattern($spec->{$kind}[-1], $kind);
+    } elsif (ref($arg) eq 'ARRAY') {
+        for (@$arg) {
+            _parse_opt_OUTPUT(%args, arg => $_);
+        }
+    } else {
+        die "Invalid argument for -$kind, ".
+            "must be a boolean or hashref or arrayref";
+    }
+}
+
 sub _default_file {
     my ($spec) = @_;
     my $level = _set_level("file", "file");
@@ -896,34 +985,15 @@ sub _default_file {
 
 sub _parse_opt_file {
     my ($spec, $arg) = @_;
-    return unless $arg;
-    if (!ref($arg) || ref($arg) eq 'HASH') {
-        my $name = "FILE".(@{ $spec->{files} }+0);
-        local $dbg_ctx = $name;
-        push @{ $spec->{files} }, _default_file($spec);
-        $spec->{files}[-1]{name} = $name;
-        if (!ref($arg)) {
-            if ($arg =~ /^(1|yes|true)$/i) {
-                #
-            } else {
-                $spec->{files}[-1]{path} = $arg;
-            }
-        } else {
-            for my $k (keys %$arg) {
-                for ($spec->{files}[-1]) {
-                    exists($_->{$k}) or die "Invalid file argument: $k, please only specify one of: " . join(", ", sort keys %$_);
-                    $_->{$k} = $k eq 'level' ? _check_level($arg->{$k}, "-file") : $arg->{$k};
-                    _debug("Set level of file to $_->{$k} (spec)") if $k eq 'level';
-                }
-            }
-        }
-        $spec->{files}[-1]{main_spec} = $spec;
-        _set_pattern($spec->{files}[-1], 'file');
-    } elsif (ref($arg) eq 'ARRAY') {
-        _parse_opt_file($spec, $_) for @$arg;
-    } else {
-        die "Invalid argument for -file, must be a boolean or hashref or arrayref";
+
+    if (!ref($arg) && $arg && $arg !~ /^(1|yes|true)$/i) {
+        $arg = {path => $arg};
     }
+
+    _parse_opt_OUTPUT(
+        kind => 'file', default_sub => \&_default_file,
+        spec => $spec, arg => $arg,
+    );
 }
 
 sub _default_dir {
@@ -950,34 +1020,15 @@ sub _default_dir {
 
 sub _parse_opt_dir {
     my ($spec, $arg) = @_;
-    return unless $arg;
-    if (!ref($arg) || ref($arg) eq 'HASH') {
-        my $name = "DIR".(@{ $spec->{dirs} }+0);
-        local $dbg_ctx = $name;
-        push @{ $spec->{dirs} }, _default_dir($spec);
-        $spec->{dirs}[-1]{name} = $name;
-        if (!ref($arg)) {
-            if ($arg =~ /^(1|yes|true)$/i) {
-                #
-            } else {
-                $spec->{dirs}[-1]{path} = $arg;
-            }
-        } else {
-            for my $k (keys %$arg) {
-                for ($spec->{dirs}[-1]) {
-                    exists($_->{$k}) or die "Invalid dir argument: $k, please only specify one of: " . join(", ", sort keys %$_);
-                    $_->{$k} = $k eq 'level' ? _check_level($arg->{$k}, "-dir") : $arg->{$k};
-                    _debug("Set level of dir to $_->{$k} (spec)") if $k eq 'level';
-                }
-            }
-        }
-        $spec->{dirs}[-1]{main_spec} = $spec;
-        _set_pattern($spec->{dirs}[-1], 'dir');
-    } elsif (ref($arg) eq 'ARRAY') {
-        _parse_opt_dir($spec, $_) for @$arg;
-    } else {
-        die "Invalid argument for -dir, must be a boolean or hashref or arrayref";
+
+    if (!ref($arg) && $arg && $arg !~ /^(1|yes|true)$/i) {
+        $arg = {path => $arg};
     }
+
+    _parse_opt_OUTPUT(
+        kind => 'dir', default_sub => \&_default_dir,
+        spec => $spec, arg => $arg,
+    );
 }
 
 sub _default_screen {
@@ -1000,30 +1051,10 @@ sub _default_screen {
 
 sub _parse_opt_screen {
     my ($spec, $arg) = @_;
-    return unless $arg;
-    if (!ref($arg) || ref($arg) eq 'HASH') {
-        my $name = "SCREEN".(@{ $spec->{screens} }+0);
-        local $dbg_ctx = $name;
-        push @{ $spec->{screens} }, _default_screen($spec);
-        $spec->{screens}[-1]{name} = $name;
-        if (!ref($arg)) {
-            #
-        } else {
-            for my $k (keys %$arg) {
-                for ($spec->{screens}[-1]) {
-                    exists($_->{$k}) or die "Invalid screen argument: $k, please only specify one of: " . join(", ", sort keys %$_);
-                    $_->{$k} = $k eq 'level' ? _check_level($arg->{$k}, "-screen") : $arg->{$k};
-                    _debug("Set level of screen to $_->{$k} (spec)") if $k eq 'level';
-                }
-            }
-        }
-        $spec->{screens}[-1]{main_spec} = $spec;
-        _set_pattern($spec->{screens}[-1], 'screen');
-    } elsif (ref($arg) eq 'ARRAY') {
-        _parse_opt_screen($spec, $_) for @$arg;
-    } else {
-        die "Invalid argument for -screen, must be a boolean or hashref or arrayref";
-    }
+    _parse_opt_OUTPUT(
+        kind => 'screen', default_sub => \&_default_screen,
+        spec => $spec, arg => $arg,
+    );
 }
 
 sub _default_syslog {
@@ -1046,30 +1077,10 @@ sub _default_syslog {
 
 sub _parse_opt_syslog {
     my ($spec, $arg) = @_;
-    return unless $arg;
-    if (!ref($arg) || ref($arg) eq 'HASH') {
-        my $name = "SYSLOG".(@{ $spec->{syslogs} }+0);
-        local $dbg_ctx = $name;
-        push @{ $spec->{syslogs} }, _default_syslog($spec);
-        $spec->{syslogs}[-1]{name} = $name;
-        if (!ref($arg)) {
-            #
-        } else {
-            for my $k (keys %$arg) {
-                for ($spec->{syslogs}[-1]) {
-                    exists($_->{$k}) or die "Invalid syslog argument: $k, please only specify one of: " . join(", ", sort keys %$_);
-                    $_->{$k} = $k eq 'level' ? _check_level($arg->{$k}, "-syslog") : $arg->{$k};
-                    _debug("Set level of syslog to $_->{$k} (spec)") if $k eq 'level';
-                }
-            }
-        }
-        $spec->{screens}[-1]{main_spec} = $spec;
-        _set_pattern($spec->{syslogs}[-1], 'syslog');
-    } elsif (ref($arg) eq 'ARRAY') {
-        _parse_opt_syslog($spec, $_) for @$arg;
-    } else {
-        die "Invalid argument for -syslog, must be a boolean or hashref or arrayref";
-    }
+    _parse_opt_OUTPUT(
+        kind => 'syslog', default_sub => \&_default_syslog,
+        spec => $spec, arg => $arg,
+    );
 }
 
 sub _set_pattern {
@@ -1078,10 +1089,12 @@ sub _set_pattern {
     unless (defined($s->{pattern})) {
         die "BUG: neither pattern nor pattern_style is defined ($name)"
             unless defined($s->{pattern_style});
-        die "Unknown pattern style for $name `$s->{pattern_style}`, use one of: ".join(", ", keys %PATTERN_STYLES)
+        die "Unknown pattern style for $name `$s->{pattern_style}`, ".
+            "use one of: ".join(", ", keys %PATTERN_STYLES)
             unless defined($PATTERN_STYLES{ $s->{pattern_style} });
         $s->{pattern} = $PATTERN_STYLES{ $s->{pattern_style} };
-        _debug("Set $name pattern to `$s->{pattern}` (from style `$s->{pattern_style}`)");
+        _debug("Set $name pattern to `$s->{pattern}` ".
+                   "(from style `$s->{pattern_style}`)");
     }
 }
 
@@ -1111,7 +1124,8 @@ sub _extract_category {
 
 sub _check_level {
     my ($level, $from) = @_;
-    $level =~ /^(off|fatal|error|warn|info|debug|trace)$/i or die "Unknown level (from $from): $level";
+    $level =~ /^(off|fatal|error|warn|info|debug|trace)$/i
+        or die "Unknown level (from $from): $level";
     lc($1);
 }
 
@@ -1124,7 +1138,8 @@ sub _set_level {
     my $pr = $prefix ? qr/$prefix(_|-)/ : qr//;
     my ($level, $from);
 
-    my @label2level =([trace=>"trace"], [debug=>"debug"], [verbose=>"info"], [quiet=>"error"]);
+    my @label2level =([trace=>"trace"], [debug=>"debug"],
+                      [verbose=>"info"], [quiet=>"error"]);
 
     _debug("Setting ", ($which ? "level of $which" : "general level"), " ...");
   SET:
@@ -1227,7 +1242,8 @@ sub _set_level {
 # return the lower level (e.g. _min_level("debug", "INFO") -> INFO
 sub _min_level {
     my ($l1, $l2) = @_;
-    my %vals = (OFF=>99, FATAL=>6, ERROR=>5, WARN=>4, INFO=>3, DEBUG=>2, TRACE=>1);
+    my %vals = (OFF=>99,
+                FATAL=>6, ERROR=>5, WARN=>4, INFO=>3, DEBUG=>2, TRACE=>1);
     $vals{uc($l1)} > $vals{uc($l2)} ? $l2 : $l1;
 }
 
