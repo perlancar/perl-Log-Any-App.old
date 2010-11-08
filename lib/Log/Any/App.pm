@@ -256,18 +256,21 @@ Suppose you want to shut up Foo, Bar::Baz, and Qux's logging because they are to
 noisy:
 
  use Log::Any::App '$log',
-  -category_alias => { -noisy => [qw/Foo Bar::Baz Qux/] },
-  -screen => [{category=>''},                     # use defaults
-              {category=>'-noisy', level=>'off'}, # silent this category
-             ],
-  -file   => [{category=>''},                     # use defaults
-              {category=>'-noisy', level=>'off'}, # silent this category
-             ];
+     -category_level => { Foo => 'off', 'Bar::Baz' => 'off', Qux => 'off' };
 
-A nicer syntax might be considered for the future :-) (As you might notice,
-Log4perl category-oriented configuration style might be better suited in these
-cases, where in simplistic Log::Any::App configuration you have to specify the
-category to each output.)
+or (same thing):
+
+ use Log::Any::App '$log',
+     -category_alias => { -noisy => [qw/Foo Bar::Baz Qux/] },
+     -category_level => { -noisy => 'off' };
+
+You can even specify this on a per-output basis. Suppose you only want to shut
+the noisy modules on the screen, but not on the file:
+
+ use Log::Any::App '$log',
+    -category_alias => { -noisy => [qw/Foo Bar::Baz Qux/] },
+    -screen => { category_level => { -noisy => 'off' } };
+
 
 =head2 Preventing logging level to be changed from outside the script
 
@@ -328,6 +331,11 @@ you can do this instead:
      -screen => [category=>'-fbb', ...],
  );
 
+=item -category_level => {CATEGORY=>LEVEL, ...}
+
+Specify per-category level. Categories not mentioned on this will use the general
+level (-level). This can be used to increase or decrease logging on certain
+categories/modules.
 
 =item -level => 'trace'|'debug'|'info'|'warn'|'error'|'fatal'|'off'
 
@@ -368,8 +376,8 @@ is assumed to be a path. If the argument is a hashref, then the keys of the
 hashref must be one of: C<level>, C<path>, C<max_size> (maximum size before
 rotating, in bytes, 0 means unlimited or never rotate), C<histories> (number of
 old files to keep, excluding the current file), C<category> (a string of ref to
-array of strings), C<pattern_style> (see L<"PATTERN STYLES">), C<pattern>
-(Log4perl pattern).
+array of strings), C<category_level> (a hashref, similar to -category_level),
+C<pattern_style> (see L<"PATTERN STYLES">), C<pattern> (Log4perl pattern).
 
 If the argument is an arrayref, it is assumed to be specifying
 multiple files, with each element of the array as a hashref.
@@ -398,18 +406,17 @@ Log messages using L<Log::Dispatch::Dir>. Each message is logged into
 separate files in the directory. Useful for dumping content
 (e.g. HTML, network dumps, or temporary results).
 
-If the argument is a false boolean value, dir logging will be turned
-off. If argument is a true value that matches /^(1|yes|true)$/i, dir
-logging will be turned on with defaults path, etc. If the argument is
-another scalar value then it is assumed to be a directory path. If the
-argument is a hashref, then the keys of the hashref must be one of:
-C<level>, C<path>, C<max_size> (maximum total size of files before
-deleting older files, in bytes, 0 means unlimited), C<max_age>
-(maximum age of files to keep, in seconds, undef means
-unlimited). C<histories> (number of old files to keep, excluding the
-current file), C<category>, C<pattern_style> (see L<"PATTERN STYLES">),
-C<pattern> (Log4perl pattern), C<filename_pattern> (pattern of file
-name).
+If the argument is a false boolean value, dir logging will be turned off. If
+argument is a true value that matches /^(1|yes|true)$/i, dir logging will be
+turned on with defaults path, etc. If the argument is another scalar value then
+it is assumed to be a directory path. If the argument is a hashref, then the keys
+of the hashref must be one of: C<level>, C<path>, C<max_size> (maximum total size
+of files before deleting older files, in bytes, 0 means unlimited), C<max_age>
+(maximum age of files to keep, in seconds, undef means unlimited). C<histories>
+(number of old files to keep, excluding the current file), C<category>,
+C<category_level> (a hashref, similar to -category_level), C<pattern_style> (see
+L<"PATTERN STYLES">), C<pattern> (Log4perl pattern), C<filename_pattern> (pattern
+of file name).
 
 If the argument is an arrayref, it is assumed to be specifying
 multiple directories, with each element of the array as a hashref.
@@ -437,14 +444,13 @@ similars).
 
 Log messages using L<Log::Log4perl::Appender::ScreenColoredLevels>.
 
-If the argument is a false boolean value, screen logging will be
-turned off. If argument is a true value that matches
-/^(1|yes|true)$/i, screen logging will be turned on with default
-settings. If the argument is a hashref, then the keys of the hashref
-must be one of: C<color> (default is true, set to 0 to turn off
-color), C<stderr> (default is true, set to 0 to log to stdout
-instead), C<level>, C<category>, C<pattern_style> (see L<"PATTERN
-STYLE">), C<pattern> (Log4perl string pattern).
+If the argument is a false boolean value, screen logging will be turned off. If
+argument is a true value that matches /^(1|yes|true)$/i, screen logging will be
+turned on with default settings. If the argument is a hashref, then the keys of
+the hashref must be one of: C<color> (default is true, set to 0 to turn off
+color), C<stderr> (default is true, set to 0 to log to stdout instead), C<level>,
+C<category>, C<category_level> (a hashref, similar to -category_level),
+C<pattern_style> (see L<"PATTERN STYLE">), C<pattern> (Log4perl string pattern).
 
 How Log::Any::App determines defaults for screen logging:
 
@@ -463,13 +469,12 @@ argument is not set).
 
 Log messages using L<Log::Dispatch::Syslog>.
 
-If the argument is a false boolean value, syslog logging will be
-turned off. If argument is a true value that matches
-/^(1|yes|true)$/i, syslog logging will be turned on with default
-level, ident, etc. If the argument is a hashref, then the keys of the
-hashref must be one of: C<level>, C<ident>, C<facility>, C<category>,
-C<pattern_style> (see L<"PATTERN STYLES">), C<pattern> (Log4perl
-pattern).
+If the argument is a false boolean value, syslog logging will be turned off. If
+argument is a true value that matches /^(1|yes|true)$/i, syslog logging will be
+turned on with default level, ident, etc. If the argument is a hashref, then the
+keys of the hashref must be one of: C<level>, C<ident>, C<facility>, C<category>,
+C<category_level> (a hashref, similar to -category_level), C<pattern_style> (see
+L<"PATTERN STYLES">), C<pattern> (Log4perl pattern).
 
 How Log::Any::App determines defaults for syslog logging:
 
