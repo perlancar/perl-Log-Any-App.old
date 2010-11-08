@@ -828,8 +828,8 @@ sub _parse_opts {
     }
 
     if (defined $opts{category_level}) {
-        die "category_alias must be a hashref"
-            unless ref($opts{category_alias}) eq 'HASH';
+        die "category_level must be a hashref"
+            unless ref($opts{category_level}) eq 'HASH';
         $spec->{category_level} = {};
         for (keys %{ $opts{category_level} }) {
             $spec->{category_level}{$_} =
