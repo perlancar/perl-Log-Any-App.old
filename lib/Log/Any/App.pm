@@ -721,8 +721,6 @@ sub _add_appenders_to_categories {
             }
         }
     }
-
-    print Dumper $cats;
 }
 
 sub _init_log4perl {
