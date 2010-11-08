@@ -1,5 +1,5 @@
 package Log::Any::App;
-# ABSTRACT: A simple wrapper for Log::Any + Log::Log4perl for use in applications
+# ABSTRACT: An easy way to use Log::Any in applications
 
 =head1 SYNOPSIS
 
@@ -15,14 +15,13 @@ L<Log::Any> makes life easy for module authors. All you need to do is:
 
  use Log::Any qw($log);
 
-and you're off logging with $log->debug(), $log->info(),
-$log->error(), etc. That's it. The task of initializing and
-configuring the logger rests on the shoulder of module users.
+and you're off producing logs with $log->debug(), $log->info(), $log->error(),
+etc. That's it. The task of consuming logs (setting up each output, deciding
+which messages gets to which output, etc) rests on the shoulder of module users.
 
-It's less straightforward for module users though, especially for
-casual ones. You have to pick an adapter and connect it to another
-logging framework (like L<Log::Log4perl>) and configure it. The
-typical incantation is like this:
+Life is not equally easy for the module users (or application authors) though.
+The typical incantation to consume logs (assuming we use the Log::Log4perl
+adapter) is:
 
  use Log::Any qw($log);
  use Log::Any::Adapter;
@@ -35,10 +34,9 @@ typical incantation is like this:
  Log::Log4perl->init(\$log4perl_config);
  Log::Any::Adapter->set('Log4perl');
 
-Frankly, I couldn't possibly remember all that (especially the details
-of Log4perl configuration), hence Log::Any::App. The goal of
-Log::Any::App is to make life equally easy for application authors and
-module users. All you need to do is:
+Frankly, I couldn't possibly remember all that (especially the details of
+Log4perl configuration), hence Log::Any::App. The goal of Log::Any::App is to
+make life equally easy for log consumers. All you need to do is:
 
  use Log::Any::App qw($log);
 
@@ -46,13 +44,14 @@ or, from the command line:
 
  perl -MLog::Any::App='$log' -MModuleThatUsesLogAny -e ...
 
-and you can display the logs in screen, file(s), syslog, etc. You can
-also log using $log->debug(), etc as usual. Most of the time you don't
-need to configure anything as Log::Any::App will construct the most
-appropriate default Log4perl config for your application.
+and you can display the logs in screen, file(s), syslog, etc. You can also log
+using $log->debug(), etc as usual. Most of the time you don't need to configure
+anything as Log::Any::App will construct the most appropriate default Log4perl
+config for your application.
 
-I mostly use Log::Any;:App in simple scripts and one-liners whenever there are
-Log::Any-using modules involved (like L<Data::Schema> or L<Config::Tree>).
+I mostly use Log::Any;:App in oneliners and simple to medium scripts whenever I
+have to use Log::Any-using modules (for example: L<Data::Schema> and
+L<Config::Tree>).
 
 =cut
 
@@ -795,6 +794,17 @@ sub _parse_opts {
         delete $opts{category_alias};
     }
 
+    if (defined $opts{category_level}) {
+        die "category_alias must be a hashref"
+            unless ref($opts{category_alias}) eq 'HASH';
+        $spec->{category_level} = {};
+        for (keys %{ $opts{category_level} }) {
+            $spec->{category_level}{$_} =
+                _check_level($opts{category_level}{$_}, "-category_level{$_}");
+        }
+        delete $opts{category_level};
+    }
+
     if (defined $opts{init}) {
         $spec->{init} = $opts{init};
         delete $opts{init};
@@ -828,7 +838,8 @@ sub _parse_opts {
 
     if (keys %opts) {
         die "Unknown option(s) ".join(", ", keys %opts)." Known opts are: ".
-            "name, level, category_alias, file, dir, screen, syslog, dump, init";
+            "name, level, category_level, category_alias, dump, init, ".
+                "file, dir, screen, syslog";
     }
 
     #use Data::Dumper; print Dumper $spec;
@@ -1238,46 +1249,31 @@ INIT {
 
 =head2 What's the benefit of using Log::Any::App?
 
-All of Log::Any and all of Log::Log4perl, as what Log::Any::App does
-is just combine those two (and add a thin wrapper). You still produce
-log with Log::Any so later should portions of your application code
-get refactored into modules, you don't need to change the logging
-part.
+You get all the benefits of Log::Any, as what Log::Any::App does is just combine
+Log::Any with L<Log::Log4perl> with some nice defaults. It provides you with an
+easy way to consume Log::Any logs.
+
+You still produce log with Log::Any so later should portions of your application
+code get refactored into modules, you don't need to change the logging part. And
+if your application becomes more complex and Log::Any::App doesn't suffice your
+custom logging needs anymore, you can just replace 'use Log::Any::App' with
+something more adequate.
 
 =head2 Do I need Log::Any::App if I am writing modules?
 
 No, if you write modules just use Log::Any.
 
-=head2 Why Log4perl instead of Log::Dispatch?
+=head2 Why use Log4perl?
 
-You can use Log::Dispatch::* output modules in Log4perl but
-(currently) not vice versa.
+Log::Any::App uses the Log4perl adapter to display the logs because it is mature,
+flexible, featureful. The other alternative adapter is Log::Dispatch. You can use
+Log::Dispatch::* output modules in Log4perl but (currently) not vice versa.
 
-You can configure Log4perl using a configuration file, so you can
-conveniently store your settings separate from the application.
+Other adapters might be considered in the future, for now I'm fairly satisfied
+with Log4perl.
 
-Feel free to fork Log::Any::App and use Log::Dispatch instead if you
-don't like Log4perl.
-
-=head2 Why not just use Log4perl then? Why bother with Log::Any at all? You're tied to Log4perl anyway.
-
-Yes, combining Log::Any with Log4perl (or some other adapter) is
-necessary to get output, but that's only in applications. Your
-Log::Any-using modules are still not tied to any adapter.
-
-The goal is to keep using Log::Any in your modules, and have a
-convenient way of displaying your logs in your applications, without a
-long incantation.
-
-Users of your modules can still use Log::Dispatch or some other
-adapter if they want to. You are not forcing your module users to use
-Log4perl.
-
-Btw, I'm actually fine with a Log4perl-only world. It's just that (currently) you
-need to explicitly initialize Log4perl so this might irritate my users if I use
-Log4perl in my modules. Log::Any's default is the nice 'null' logging so my users
-don't need to be aware of logging at all. And Log::Any also provides some other
-convenience, e.g. debugf() et al which can dump data structures,
+Note that producing logs are still done with Log::Any as usual, they are not tied
+to Log4perl in any way. They can be used without Log::Any::App or Log4perl.
 
 =head2 How do I create extra logger objects?
 
