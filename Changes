@@ -1,17 +1,10 @@
 Revision history for Log-Any-App
 
 0.18     2010-11-07
-
-         - Fixed: Setting per-output level (again!), previously generated
-           Log4perl configuration didn't respect target with higher level
-           setting.
-
-         - *New: '-category_aliases' option
-
-         - *New: 'category' in output spec now accepts array
-
+         - New: '-category_aliases' option
+         - *New: 'category_level' option
+         - New: 'category' in output spec now accepts array
          - Doc: Rewritten usage & examples section
-
 
 0.17     2010-11-06
          - Doc updates.
