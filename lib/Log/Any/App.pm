@@ -271,6 +271,14 @@ the noisy modules on the screen, but not on the file:
     -category_alias => { -noisy => [qw/Foo Bar::Baz Qux/] },
     -screen => { category_level => { -noisy => 'off' } };
 
+or perhaps, you want to shut the noisy modules everywhere, except on the screen:
+
+ use Log::Any::App '$log',
+     -category_alias => { -noisy => [qw/Foo Bar::Baz Qux/] },
+     -category_level => { -noisy => 'off' },
+     -syslog => 1,
+     -file   => "/var/log/foo",
+     -screen => { category_level => {} }; # do not do per-category level
 
 =head2 Preventing logging level to be changed from outside the script
 
