@@ -643,6 +643,15 @@ sub _init_log4perl {
             $cats{$cat}{level} = _min_level($cats{$cat}{level}, $_->{level});
             push @{ $cats{$cat}{appenders} }, $a;
         }
+        if ($_->{category_level}) {
+            while (my ($k, $v) = each %{ $_->{category_level} }) {
+                for my $cat (_extract_category($_, $k)) {
+                    $cats{$cat} ||= {appenders => [], level => $spec->{level}};
+                    $cats{$cat}{level} = _min_level($cats{$cat}{level}, $v);
+                    push @{ $cats{$cat}{appenders} }, $a;
+                }
+            }
+        }
     }
     $i = 0;
     for (@{ $spec->{syslogs} }) {
@@ -874,6 +883,7 @@ sub _default_file {
     }
     return {
         level => $level,
+        category_level => $spec->{category_level},
         path => $> ? File::Spec->catfile(File::HomeDir->my_home, "$spec->{name}.log") :
             "/var/log/$spec->{name}.log", # XXX and on Windows?
         max_size => undef,
@@ -925,6 +935,7 @@ sub _default_dir {
     }
     return {
         level => $level,
+        category_level => $spec->{category_level},
         path => $> ? File::Spec->catfile(File::HomeDir->my_home, "log", $spec->{name}) :
             "/var/log/$spec->{name}", # XXX and on Windows?
         max_size => undef,
@@ -980,6 +991,7 @@ sub _default_screen {
         color => $ENV{COLOR} // (-t STDOUT),
         stderr => 1,
         level => $level,
+        category_level => $spec->{category_level},
         category => '',
         pattern_style => 'script_short',
         pattern => undef,
@@ -1023,6 +1035,7 @@ sub _default_syslog {
     }
     return {
         level => $level,
+        category_level => $spec->{category_level},
         ident => $spec->{name},
         facility => 'daemon',
         pattern_style => 'syslog',
@@ -1073,8 +1086,8 @@ sub _set_pattern {
 }
 
 sub _extract_category {
-    my ($ospec) = @_;
-    my $c0 = $ospec->{category};
+    my ($ospec, $c) = @_;
+    my $c0 = $c // $ospec->{category};
     my @res;
     if (ref($c0) eq 'ARRAY') { @res = @$c0 } else { @res = ($c0) }
     # replace alias with real value
@@ -1249,15 +1262,22 @@ INIT {
 
 =head2 What's the benefit of using Log::Any::App?
 
-You get all the benefits of Log::Any, as what Log::Any::App does is just combine
-Log::Any with L<Log::Log4perl> with some nice defaults. It provides you with an
-easy way to consume Log::Any logs.
+You get all the benefits of Log::Any, as what Log::Any::App does is just wrap
+Log::Any and L<Log::Log4perl> with some nice defaults. It provides you with an
+easy way to consume Log::Any logs and customize level/some other options via
+various ways.
 
-You still produce log with Log::Any so later should portions of your application
+You still produce logs with Log::Any so later should portions of your application
 code get refactored into modules, you don't need to change the logging part. And
 if your application becomes more complex and Log::Any::App doesn't suffice your
-custom logging needs anymore, you can just replace 'use Log::Any::App' with
+custom logging needs anymore, you can just replace 'use Log::Any::App' line with
 something more adequate.
+
+=head2 And what's the benefit of using Log::Any?
+
+This is better described in the Log::Any documentation itself, but in short:
+Log::Any frees your module users to use whatever logging framework they want. It
+increases the reusability of your modules.
 
 =head2 Do I need Log::Any::App if I am writing modules?
 
@@ -1266,14 +1286,14 @@ No, if you write modules just use Log::Any.
 =head2 Why use Log4perl?
 
 Log::Any::App uses the Log4perl adapter to display the logs because it is mature,
-flexible, featureful. The other alternative adapter is Log::Dispatch. You can use
-Log::Dispatch::* output modules in Log4perl but (currently) not vice versa.
+flexible, featureful. The other alternative adapter is Log::Dispatch, but you can
+use Log::Dispatch::* output modules in Log4perl and (currently) not vice versa.
 
 Other adapters might be considered in the future, for now I'm fairly satisfied
 with Log4perl.
 
-Note that producing logs are still done with Log::Any as usual, they are not tied
-to Log4perl in any way. They can be used without Log::Any::App or Log4perl.
+Note that producing logs are still done with Log::Any as usual and not tied to
+Log4perl in any way.
 
 =head2 How do I create extra logger objects?
 
@@ -1283,15 +1303,16 @@ The usual way as with Log::Any:
 
 =head2 My needs are not met by the simple configuration system of Log::Any::App!
 
-You can use Log4perl adapter directly and write your own Log4perl configuration.
-Log::Any::App is meant for quick and simple logging output needs anyway (but do
-tell me if your logging output needs are reasonably simple and should be
-supported by Log::Any::App).
+You can use Log4perl adapter directly and write your own Log4perl configuration
+(or even other adapters). Log::Any::App is meant for quick and simple logging
+output needs anyway (but do tell me if your logging output needs are reasonably
+simple and should be supported by Log::Any::App).
 
 =head1 BUGS/TODOS
 
 Need to provide appropriate defaults for Windows/other OS.
 
+Probably: SCREEN0_DEBUG, --file1-log-level, etc.
 
 =head1 SEE ALSO
 
