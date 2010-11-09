@@ -564,8 +564,8 @@ sub init {
     $caller ||= caller();
 
     my $spec = _parse_opts($args, $caller);
-    return unless $spec->{init};
-    _init_log4perl($spec);
+    _init_log4perl($spec) if $spec->{init};
+    $spec;
 }
 
 sub _gen_appender_config {
