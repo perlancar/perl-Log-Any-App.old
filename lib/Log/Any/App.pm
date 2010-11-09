@@ -555,7 +555,7 @@ If you have a favorite pattern style, please do share them.
 =cut
 
 my $init_args;
-my $init_called;
+our $init_called;
 
 sub init {
     return if $init_called++;
