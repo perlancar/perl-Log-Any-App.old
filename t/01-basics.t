@@ -34,7 +34,7 @@ my %vars;
     LogLevel  => ["debug", "debug"],
     Log_Level => ["info", "info"],
     LOGLEVEL  => ["trace", "trace"],
-    LOG_LEVEL => ["trace", "trace"],
+    LOG_LEVEL => ["TRACE", "trace"],
     Verbose   => [1, "info"],
     QUIET     => [1, "error"],
     Debug     => [1, "debug"],
@@ -53,7 +53,7 @@ while (my ($k, $v) = each %vars) {
     screen_loglevel  => ["fatal", screen => "fatal"],
     file_log_level   => ["error", file   => "error"],
     Screen_LogLevel  => ["debug", screen => "debug"],
-    File_Log_Level   => ["info",  file   => "info" ],
+    File_Log_Level   => ["INFO",  file   => "info" ],
     SCREEN_LOGLEVEL  => ["trace", screen => "trace"],
     FILE_LOG_LEVEL   => ["trace", file   => "trace"],
     Screen_Verbose   => [1,       screen => "info" ],
@@ -96,7 +96,7 @@ while (my ($k, $v) = each %vars) {
 
 %vars = (
     '--loglevel'   => ["fatal", "fatal"],
-    '--log-level'  => ["debug", "debug"],
+    '--log-level'  => ["DEBUG", "debug"],
     '--log_level'  => ["info" , "info" ],
     '--quiet'      => [undef  , "error"],
 ); #4
@@ -111,7 +111,7 @@ while (my ($k, $v) = each %vars) {
 %vars = (
     '--screen-loglevel'   => ["fatal", screen => "fatal"],
     '--file_log-level'    => ["debug", file   => "debug"],
-    '--screen-log_level'  => ["info" , screen => "info" ],
+    '--screen-log_level'  => ["INFO" , screen => "info" ],
     '--file_quiet'        => [undef  , file   => "error"],
 ); #4
 while (my ($k, $v) = each %vars) {
