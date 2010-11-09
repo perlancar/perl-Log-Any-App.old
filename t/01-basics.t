@@ -9,21 +9,21 @@ use strict;
 use warnings;
 
 use Log::Any::App -dir => 0, -file => 0, -screen => 0, -syslog => 0, -init => 0;
-use Test::More tests => 41;
+use Test::More tests => 59;
 
 test_init(
     name => 'default',
     num_dirs => 0, num_files => 1, num_screens => 1, num_syslogs => 0,
     level => 'warn',
     file_level => 'warn', screen_level => 'warn',
-); #7
+); #=7
 
 {
     local $0 = "-e";
     test_init(
         name => '-e doesnt get file by default',
         num_dirs => 0, num_files => 0, num_screens => 1, num_syslogs => 0,
-    ); #4
+    ); #=4
 }
 
 my %vars;
@@ -47,7 +47,7 @@ while (my ($k, $v) = each %vars) {
         name  => "setting general level via variable: \$$k = $v->[0]",
         level => $v->[1],
     ); #1
-}
+} #=10x1
 
 %vars = (
     screen_loglevel  => ["fatal", screen => "fatal"],
@@ -68,13 +68,59 @@ while (my ($k, $v) = each %vars) {
         name  => "setting output level via variable: \$$k = $v->[0]",
         level => "warn", "$v->[1]_level" => $v->[2],
     ); #2
-}
+} #=10x2
 
-# XXX setting general level via env
-# XXX setting output level via env
+%vars = (
+    LOG_LEVEL => ["trace", "trace"],
+    VERBOSE   => [1,       "info" ],
+); #2
+while (my ($k, $v) = each %vars) {
+    test_init(
+        pre   => sub { $ENV{$k} = $v->[0] },
+        name  => "setting general level env: $k = $v->[0]",
+        level => $v->[1],
+    ); #1
+} #=2x1
 
-# XXX setting general level via cmdline
-# XXX setting output level via cmdline
+%vars = (
+    SCREEN_LOG_LEVEL => ["trace", screen => "trace"],
+    FILE_DEBUG       => [1,       file   => "debug"],
+); #2
+while (my ($k, $v) = each %vars) {
+    test_init(
+        pre   => sub { $ENV{$k} = $v->[0] },
+        name  => "setting output level env: $k = $v->[0]",
+        level => "warn", "$v->[1]_level" => $v->[2],
+    ); #2
+} #=2x2
+
+%vars = (
+    '--loglevel'   => ["fatal", "fatal"],
+    '--log-level'  => ["debug", "debug"],
+    '--log_level'  => ["info" , "info" ],
+    '--quiet'      => [undef  , "error"],
+); #4
+while (my ($k, $v) = each %vars) {
+    test_init(
+        pre   => sub { push @ARGV, grep {defined} $k, $v->[0] },
+        name  => "setting general level via cmdline opts: ".join(" ", @ARGV),
+        level => $v->[1],
+    ); #1
+} #=4x1
+
+%vars = (
+    '--screen-loglevel'   => ["fatal", screen => "fatal"],
+    '--file_log-level'    => ["debug", file   => "debug"],
+    '--screen-log_level'  => ["info" , screen => "info" ],
+    '--file_quiet'        => [undef  , file   => "error"],
+); #4
+while (my ($k, $v) = each %vars) {
+    test_init(
+        pre   => sub { push @ARGV, grep {defined} $k, $v->[0] },
+        name  => "setting output level via cmdline opts: ".join(" ", @ARGV),
+        level => "warn", "$v->[1]_level" => $v->[2],
+    ); #2
+} #=4x2
 
 # XXX priority/overrides (setting via env vs cmdline vs vars vs init args)
 # XXX invalid level dies
