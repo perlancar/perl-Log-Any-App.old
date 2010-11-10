@@ -197,7 +197,7 @@ command-line options (SCREEN_DEBUG, --screen-verbose, and so on).
 =head2 Changing log file name/location
 
 By default Log::Any::App will use ~/$NAME.log (or /var/log/$NAME.log if script is
-running as root), where $NAME taken from $0, but can be changed using:
+running as root), where $NAME is taken from $0. But this can be changed using:
 
  use Log::Any::App '$log', -name => 'myprog';
 
