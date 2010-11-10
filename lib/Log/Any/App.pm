@@ -226,7 +226,7 @@ Logging to syslog is enabled by default if your script looks like a daemon, e.g.
  use Net::Daemon; # this indicate your program is a daemon
  use Log::Any::App; # syslog logging will be turned on by default
 
-but if you don't want syslog logging:
+but if you are certain you don't want syslog logging:
 
  use Log::Any::App -syslog => 0;
 
