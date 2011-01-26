@@ -296,16 +296,22 @@ came to be, set environment LOGANYAPP_DEBUG to true.
 
 =head2 init(\@args)
 
-This is the actual function that implements the setup and
-configuration of logging. You normally need not call this function
-explicitly, it will be called once in an INIT block. In fact, when you
-do:
+This is the actual function that implements the setup and configuration of
+logging. You normally need not call this function explicitly (but see below), it
+will be called once in an INIT block. In fact, when you do:
 
  use Log::Any::App 'a', 'b', 'c';
 
 it is actually passed as:
 
  init(['a', 'b', 'c']);
+
+You will need to call init() manually if you require Log::Any::App at runtime,
+in which case it is too late to run INIT block. If you want to run Log::Any::App
+in runtime phase, do this:
+
+ require Log::Any::App;
+ Log::Any::App::init(['a', 'b', 'c']);
 
 Arguments to init can be one or more of:
 
