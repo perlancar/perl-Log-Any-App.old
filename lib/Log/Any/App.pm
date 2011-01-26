@@ -1289,9 +1289,15 @@ sub import {
     $init_args = \@args;
 }
 
-INIT {
-    my $caller = caller();
-    init($init_args, $caller);
+{
+    no warnings;
+    # if we are loaded at run-time, it's too late to run INIT blocks, so user
+    # must call init() manually. but sometimes this is what the user wants. so
+    # shut up perl warning.
+    INIT {
+        my $caller = caller();
+        init($init_args, $caller);
+    }
 }
 
 
