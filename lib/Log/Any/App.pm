@@ -807,6 +807,7 @@ sub _dirname {
 sub _parse_args {
     my ($args, $caller) = @_;
     $args //= []; # if we don't import(), we never get args
+
     my $i = 0;
     while ($i < @$args) {
         my $arg = $args->[$i];
@@ -822,6 +823,7 @@ sub _parse_args {
 
 sub _parse_opts {
     my ($args, $caller) = @_;
+    $args //= []; # if we don't import(), we never get args
 
     my $spec = {
         name => _basename($0),
