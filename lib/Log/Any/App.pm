@@ -385,12 +385,14 @@ L<Log::Dispatch::FileRotate>.
 
 If the argument is a false boolean value, file logging will be turned off. If
 argument is a true value that matches /^(1|yes|true)$/i, file logging will be
-turned on with default path, etc. If the argument is another scalar value then it
-is assumed to be a path. If the argument is a hashref, then the keys of the
+turned on with default path, etc. If the argument is another scalar value then
+it is assumed to be a path. If the argument is a hashref, then the keys of the
 hashref must be one of: C<level>, C<path>, C<max_size> (maximum size before
 rotating, in bytes, 0 means unlimited or never rotate), C<histories> (number of
-old files to keep, excluding the current file), C<category> (a string of ref to
-array of strings), C<category_level> (a hashref, similar to -category_level),
+old files to keep, excluding the current file), C<date_pattern> (will be passed
+to DatePattern argument in FileRotate's constructor), C<tz> (will be passed to
+TZ argument in FileRotate's constructor), C<category> (a string of ref to array
+of strings), C<category_level> (a hashref, similar to -category_level),
 C<pattern_style> (see L<"PATTERN STYLES">), C<pattern> (Log4perl pattern).
 
 If the argument is an arrayref, it is assumed to be specifying
@@ -596,6 +598,9 @@ sub _gen_appender_config {
         $params->{filename} = $ospec->{path};
         $params->{size}  = $ospec->{size} if $ospec->{size};
         $params->{max}   = $ospec->{histories}+1 if $ospec->{histories};
+        $params->{DatePattern} = $ospec->{date_pattern}
+            if $ospec->{date_pattern};
+        $params->{TZ} = $ospec->{tz} if $ospec->{tz};
     } elsif ($name =~ /^screen/i) {
         $class = "Log::Log4perl::Appender::" .
             ($ospec->{color} ? "ScreenColoredLevels" : "Screen");
@@ -989,6 +994,8 @@ sub _default_file {
             "/var/log/$spec->{name}.log", # XXX and on Windows?
         max_size => undef,
         histories => undef,
+        date_pattern => undef,
+        tz => undef,
         category => '',
         pattern_style => 'daemon',
         pattern => undef,
