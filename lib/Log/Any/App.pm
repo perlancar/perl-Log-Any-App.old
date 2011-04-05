@@ -3,11 +3,34 @@ package Log::Any::App;
 
 =head1 SYNOPSIS
 
-    # in your script/application
-    use Log::Any::App qw($log);
+Most of the time you only need to do this:
 
-    # or, in command line
-    % perl -MLog::Any::App -MModuleThatUsesLogAny -e ...
+ # in your script.pl
+ use Log::Any::App qw($log);
+ $log->warn("blah ...");
+ if ($log->is_debug) { ... }
+
+ # or, in command line
+ % perl -MLog::Any::App -MModuleThatUsesLogAny -e'...'
+
+You then customize level using environment variables or command-line options
+(won't interfere with command-line processing modules like Getopt::Long etc):
+
+ % DEBUG=1 script.pl
+ % LOG_LEVEL=trace script.pl
+ % script.pl --verbose
+
+But if you need to customize level (and other stuffs) from the script, you can:
+
+ use Log::Any::App '$log',
+     -syslog => 1, # turn on syslog logging, default is autodetect
+     -screen => 0, # turn off screen logging, default is on
+     -file   => {path=>'/foo/bar', rotate=>'10M', histories=>10};
+                # customize file logging, default file logging is on unless -e
+
+For more customization like categories, per-category level, per-output level,
+multiple outputs, string patterns, etc see L</USING AND EXAMPLES>. For details
+on how Log::Any::App chooses defaults, read documentation on init().
 
 =head1 DESCRIPTION
 
