@@ -38,7 +38,7 @@ on how Log::Any::App chooses defaults, read documentation on init().
 Log::Any::App is a convenient combo for L<Log::Any> and L<Log::Log4perl>
 (although alternative backends beside Log4perl might be considered in the
 future). To use Log::Any::App you need to be sold on the idea of Log::Any first,
-so please do a read on that first.
+so please do a read up on that first.
 
 The goal of Log::Any::App is to provide developers an easy and concise way to
 add logging to their L<applications>. That is, instead of modules; modules
