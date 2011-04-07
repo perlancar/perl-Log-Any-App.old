@@ -1331,6 +1331,17 @@ sub import {
 
 =head1 FAQ
 
+=head2 Why?
+
+I initially wrote Log::Any::App because I'm sick of having to parse command-line
+options to set log level like --verbose, --log-level=debug for every script.
+Also, before using Log::Any I previously used Log4perl directly and modules
+which produce logs using Log4perl cannot be directly use'd in oneliners without
+Log4perl complaining about uninitialized configuration or some such. Thus, I
+like Log::Any's default null adapter and want to settle using Log::Any for any
+kind of logging. Log::Any::App makes it easy to output Log::Any logs in your
+scripts and even oneliners.
+
 =head2 What's the benefit of using Log::Any::App?
 
 You get all the benefits of Log::Any, as what Log::Any::App does is just wrap
