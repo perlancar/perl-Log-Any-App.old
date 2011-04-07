@@ -103,9 +103,9 @@ or from the command line:
 
  % perl -MLog::Any::App -MModuleThatUsesLogAny -e ...
 
-This will send logs to screen as well as file (unless -e scripts, which only
-logs to screen). Default log file is ~/$SCRIPT_NAME.log, or
-/var/log/$SCRIPT_NAME.log if script is running as root. Default level is 'warn'.
+This will send logs to screen as well as file (unless -e scripts, which only log
+to screen). Default log file is ~/$SCRIPT_NAME.log, or /var/log/$SCRIPT_NAME.log
+if script is running as root. Default level is 'warn'.
 
 The 'use Log::Any::App' statement can be issued before or after the modules that
 use Log::Any, it doesn't matter. Logging will be initialized in the INIT phase
