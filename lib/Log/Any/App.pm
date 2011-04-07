@@ -1349,12 +1349,6 @@ Log::Any and Log4perl with some nice defaults. It provides you with an easy way
 to consume Log::Any logs and customize level/some other options via various
 ways.
 
-You still produce logs with Log::Any so later should portions of your
-application code get refactored into modules, you don't need to change the
-logging part. And if your application becomes more complex and Log::Any::App
-doesn't suffice your custom logging needs anymore, you can just replace 'use
-Log::Any::App' line with something more adequate.
-
 =head2 And what's the benefit of using Log::Any?
 
 This is better described in the Log::Any documentation itself, but in short:
@@ -1376,8 +1370,15 @@ Other adapters might be considered in the future, for now I'm fairly satisfied
 with Log4perl. It does have a slightly heavy startup cost for my taste, but it
 is still bearable.
 
-Note that producing logs are still done with Log::Any as usual and not tied to
+=head2 Are you coupling adapter with Log::Any (thus defeat Log::Any's purpose)?
+
+No, producing logs are still done with Log::Any as usual and not tied to
 Log4perl in any way.
+
+Should portions of your application code get refactored into modules later, you
+don't need to change the logging part. And if your application becomes more
+complex and Log::Any::App doesn't suffice your custom logging needs anymore, you
+can just replace 'use Log::Any::App' line with something more adequate.
 
 =head2 How do I create extra logger objects?
 
