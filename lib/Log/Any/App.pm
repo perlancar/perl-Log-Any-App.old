@@ -1370,7 +1370,7 @@ Other adapters might be considered in the future, for now I'm fairly satisfied
 with Log4perl. It does have a slightly heavy startup cost for my taste, but it
 is still bearable.
 
-=head2 Are you coupling adapter with Log::Any (thus defeat Log::Any's purpose)?
+=head2 Are you coupling adapter with Log::Any (thus defeating Log::Any's purpose)?
 
 No, producing logs are still done with Log::Any as usual and not tied to
 Log4perl in any way.
