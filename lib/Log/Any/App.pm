@@ -297,9 +297,9 @@ screen:
  use Log::Any::App '$log',
      -category_alias => { -noisy => [qw/Foo Bar::Baz Qux/] },
      -category_level => { -noisy => 'off' },
-     -syslog => 1,
-     -file   => "/var/log/foo",
-     -screen => { category_level => {} }; # do not do per-category level
+     -syslog => 1,                        # uses general -category_level
+     -file   => "/var/log/foo",           # uses general -category_level
+     -screen => { category_level => {} }; # overrides general -category_level
 
 =head2 Preventing logging level to be changed from outside the script
 
