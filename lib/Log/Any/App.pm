@@ -25,7 +25,7 @@ But if you need to customize level (and other stuffs) from the script, you can:
  use Log::Any::App '$log',
      -syslog => 1, # turn on syslog logging, default is autodetect
      -screen => 0, # turn off screen logging, default is on
-     -file   => {path=>'/foo/bar', rotate=>'10M', histories=>10};
+     -file   => {path=>'/foo/bar', max_size=>'10M', histories=>10};
                 # customize file logging, default file logging is on unless -e
 
 For more customization like categories, per-category level, per-output level,
@@ -232,7 +232,7 @@ example:
  use Log::Any::App '$log',
      -screen => {color=>0},   # never use color
      -file   => {path=>'/var/log/foo',
-                 rotate=>'10M',
+                 max_size=>'10M',
                  histories=>10,
                 },
 
