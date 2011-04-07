@@ -1345,9 +1345,9 @@ scripts and even oneliners.
 =head2 What's the benefit of using Log::Any::App?
 
 You get all the benefits of Log::Any, as what Log::Any::App does is just wrap
-Log::Any and L<Log::Log4perl> with some nice defaults. It provides you with an
-easy way to consume Log::Any logs and customize level/some other options via
-various ways.
+Log::Any and Log4perl with some nice defaults. It provides you with an easy way
+to consume Log::Any logs and customize level/some other options via various
+ways.
 
 You still produce logs with Log::Any so later should portions of your
 application code get refactored into modules, you don't need to change the
