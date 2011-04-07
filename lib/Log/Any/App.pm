@@ -1388,10 +1388,10 @@ The usual way as with Log::Any:
 
 =head2 My needs are not met by the simple configuration system of Log::Any::App!
 
-You can use Log4perl adapter directly and write your own Log4perl configuration
-(or even other adapters). Log::Any::App is meant for quick and simple logging
-output needs anyway (but do tell me if your logging output needs are reasonably
-simple and should be supported by Log::Any::App).
+You can use the Log4perl adapter directly and write your own Log4perl
+configuration (or even other adapters). Log::Any::App is meant for quick and
+simple logging output needs anyway (but do tell me if your logging output needs
+are reasonably simple and should be supported by Log::Any::App).
 
 =head1 BUGS/TODOS
 
