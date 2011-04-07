@@ -41,9 +41,9 @@ Log::Any::App you need to be sold on the idea of Log::Any first, so please do a
 read on that first.
 
 The goal of Log::Any::App is to provide developers an easy and concise way to
-add logging to their applications. Modules can remain using Log::Any to produce
-logs, and applications can upgrade to Log4perl later when necessary (although in
-my experience, they usually don't).
+add logging to their L<applications>. That is, instead of modules; modules
+remain using Log::Any to produce logs. Applications can upgrade to full Log4perl
+later when necessary, although in my experience, they usually don't.
 
 With Log::Any::App, you can replace this code in your application:
 
