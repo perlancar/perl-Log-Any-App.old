@@ -1373,7 +1373,8 @@ is still bearable.
 =head2 Are you coupling adapter with Log::Any (thus defeating Log::Any's purpose)?
 
 No, producing logs are still done with Log::Any as usual and not tied to
-Log4perl in any way.
+Log4perl in any way. Your modules, as explained above, only 'use Log::Any' and
+are not dependent of Log::Any::App at all.
 
 Should portions of your application code get refactored into modules later, you
 don't need to change the logging part. And if your application becomes more
