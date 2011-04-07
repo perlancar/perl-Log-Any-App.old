@@ -266,7 +266,7 @@ Each output argument can accept an arrayref to specify more than one output. For
 example below is a code to log to three files:
 
  use Log::Any::App '$log',
-     -file => [1, # the default file logging to ~/$NAME.log
+     -file => [1, # default, to ~/$NAME.log or /var/log/$NAME.log
                "/var/log/log1",
                {path=>"/var/log/debug_foo", category=>'Foo', level=>'debug'}];
 
