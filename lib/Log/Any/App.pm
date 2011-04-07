@@ -63,7 +63,8 @@ with just this:
  use Log::Any::App '$log'; # plus some other options when necessary
 
 Most of the time you don't need to configure anything as Log::Any::App will
-construct the most appropriate default Log4perl config for your application.
+construct the most appropriate default Log4perl configuration for your
+application.
 
 =cut
 
