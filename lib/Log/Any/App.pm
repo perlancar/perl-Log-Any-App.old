@@ -1393,7 +1393,7 @@ L<Log::Any> and L<Log::Log4perl>
 
 Some alternative logging modules: L<Log::Dispatchouli> (based on
 L<Log::Dispatch>), L<Log::Fast>, L<Log::Log4perl::Tiny>. Really, there are
-around 7,451 of them (roughly one third of CPAN).
+around 7,451 of them (roughly one third of CPAN, at the time of this writing).
 
 =cut
 
