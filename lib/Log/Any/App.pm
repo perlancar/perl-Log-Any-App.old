@@ -20,7 +20,7 @@ Here's the default logging that Log::Any::App sets up for you:
  -e (one-liners)                  y       -                  -             -
  Scripts running as normal user   y       ~/NAME.log         -             -
  Scripts running as root          y       /var/log/NAME.log  -             -
- Daemons                          -       y                  -             -
+ Daemons                          -       y                  y             -
 
 You can customize level from outside the script, using environment variables or
 command-line options (won't interfere with command-line processing modules like
@@ -30,17 +30,16 @@ Getopt::Long etc):
  % LOG_LEVEL=trace script.pl
  % script.pl --verbose
 
-And if you need to customize other stuffs:
+And to customize other stuffs:
 
  use Log::Any::App '$log',
-     -syslog => 1, # turn on syslog logging, default is autodetect
-     -screen => 0, # turn off screen logging, default is on
+     -syslog => 1, # turn on syslog logging explicitly
+     -screen => 0, # turn off screen logging explicitly
      -file   => {path=>'/foo/bar', max_size=>'10M', histories=>10};
-                # customize file logging, default file logging is on unless -e
+                # customize file logging
 
 For more customization like categories, per-category level, per-output level,
-multiple outputs, string patterns, etc see L</USING AND EXAMPLES>. For details
-on how Log::Any::App chooses defaults, read documentation on init().
+multiple outputs, string patterns, etc see L</USING AND EXAMPLES> and init().
 
 
 =head1 DESCRIPTION
