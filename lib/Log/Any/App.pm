@@ -21,7 +21,7 @@ customized):
  -e (one-liners)                  y       -                  -             -
  Scripts running as normal user   y       ~/NAME.log         -             -
  Scripts running as root          y       /var/log/NAME.log  -             -
- Daemons                          y       y                  -             -
+ Daemons                          -       y                  -             -
 
 You can customize level from outside the script, using environment variables or
 command-line options (won't interfere with command-line processing modules like
@@ -251,13 +251,19 @@ For all the available options of each output, see the init() function.
 
 =head2 Logging to syslog
 
-Logging to syslog is enabled by default if your script looks like a daemon,
-e.g.:
+Logging to syslog is enabled by default if your script looks like or declare
+that it is a daemon, e.g.:
 
  use Net::Daemon; # this indicate your program is a daemon
  use Log::Any::App; # syslog logging will be turned on by default
 
-but if you are certain you don't want syslog logging:
+ use Log::Any::App -daemon => 1; # script declares that it is a daemon
+
+ # idem
+ package main;
+ our $IS_DAEMON = 1;
+
+But if you are certain you don't want syslog logging:
 
  use Log::Any::App -syslog => 0;
 
@@ -360,6 +366,11 @@ module, right?)
 =item -name => STRING
 
 Change the program name. Default is taken from $0.
+
+=item -daemon => BOOL
+
+Declare that script is a daemon. Default is no. Aside from this, to declare that
+your script is a daemon you can also set $main::IS_DAEMON to true.
 
 =item -category_alias => {ALIAS=>CATEGORY, ...}
 
@@ -524,8 +535,9 @@ C<pattern_style> (see L<"PATTERN STYLES">), C<pattern> (Log4perl pattern).
 How Log::Any::App determines defaults for syslog logging:
 
 If a program is a daemon (determined by detecting modules like L<Net::Server> or
-L<Proc::PID::File>) then syslog logging is turned on by default and facility is
-set to C<daemon>, otherwise the default is off.
+L<Proc::PID::File>, or by checking if -daemon or $main::IS_DAEMON is true) then
+syslog logging is turned on by default and facility is set to C<daemon>,
+otherwise the default is off.
 
 Ident is program's name by default ($0, or C<-name>).
 
@@ -590,6 +602,7 @@ If you have a favorite pattern style, please do share them.
 
 my $init_args;
 our $init_called;
+my $is_daemon;
 
 sub init {
     return if $init_called++;
@@ -857,6 +870,7 @@ sub _parse_opts {
         name => _basename($0),
         init => 1,
         dump => ($ENV{LOGANYAPP_DEBUG} ? 1:0),
+        daemon => 0,
         category_alias => {},
     };
 
@@ -910,6 +924,12 @@ sub _parse_opts {
         delete $opts{name};
     }
 
+    if (defined $opts{daemon}) {
+        $spec->{daemon} = $opts{daemon};
+        $is_daemon = $opts{daemon};
+        delete $opts{daemon};
+    }
+
     if (defined $opts{dump}) {
         $spec->{dump} = 1;
         delete $opts{dump};
@@ -924,7 +944,7 @@ sub _parse_opts {
     delete $opts{dir};
 
     $spec->{screen} = [];
-    _parse_opt_screen($spec, $opts{screen} // 1);
+    _parse_opt_screen($spec, $opts{screen} // (!_is_daemon()));
     delete $opts{screen};
 
     $spec->{syslog} = [];
@@ -942,21 +962,27 @@ sub _parse_opts {
 }
 
 sub _is_daemon {
-    $INC{"App/Daemon.pm"} ||
-    $INC{"Daemon/Easy.pm"} ||
-    $INC{"Daemon/Daemonize.pm"} ||
-    $INC{"Daemon/Generic.pm"} ||
-    $INC{"Daemonise.pm"} ||
-    $INC{"Daemon/Simple.pm"} ||
-    $INC{"HTTP/Daemon.pm"} ||
-    $INC{"IO/Socket/INET/Daemon.pm"} ||
-    $INC{"Mojo/Server/Daemon.pm"} ||
-    $INC{"MooseX/Daemonize.pm"} ||
-    $INC{"Net/Daemon.pm"} ||
-    $INC{"Net/Server.pm"} ||
-    $INC{"Proc/Daemon.pm"} ||
-    $INC{"Proc/PID/File.pm"} ||
-    $INC{"Win32/Daemon/Simple.pm"} ||
+    $is_daemon //
+    $main::IS_DAEMON //
+
+    (
+        $INC{"App/Daemon.pm"} ||
+        $INC{"Daemon/Easy.pm"} ||
+        $INC{"Daemon/Daemonize.pm"} ||
+        $INC{"Daemon/Generic.pm"} ||
+        $INC{"Daemonise.pm"} ||
+        $INC{"Daemon/Simple.pm"} ||
+        $INC{"HTTP/Daemon.pm"} ||
+        $INC{"IO/Socket/INET/Daemon.pm"} ||
+        $INC{"Mojo/Server/Daemon.pm"} ||
+        $INC{"MooseX/Daemonize.pm"} ||
+        $INC{"Net/Daemon.pm"} ||
+        $INC{"Net/Server.pm"} ||
+        $INC{"Proc/Daemon.pm"} ||
+        $INC{"Proc/PID/File.pm"} ||
+        $INC{"Win32/Daemon/Simple.pm"}
+    ) //
+
     0;
 }
 
