@@ -13,8 +13,7 @@ Most of the time you only need to do this:
  # or, in command line
  % perl -MLog::Any::App -MModuleThatUsesLogAny -e'...'
 
-Here's the default logging that Log::Any::App setups for you (all can be
-customized):
+Here's the default logging that Log::Any::App sets up for you:
 
  Condition                        screen  file               syslog        dir
  --------------------------------+-------+------------------+-------------+---
@@ -31,7 +30,7 @@ Getopt::Long etc):
  % LOG_LEVEL=trace script.pl
  % script.pl --verbose
 
-But if you need to customize level (and other stuffs) from the script, you can:
+And if you need to customize other stuffs:
 
  use Log::Any::App '$log',
      -syslog => 1, # turn on syslog logging, default is autodetect
