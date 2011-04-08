@@ -13,8 +13,19 @@ Most of the time you only need to do this:
  # or, in command line
  % perl -MLog::Any::App -MModuleThatUsesLogAny -e'...'
 
-You then customize level using environment variables or command-line options
-(won't interfere with command-line processing modules like Getopt::Long etc):
+Here's the default logging that Log::Any::App setups for you (all can be
+customized):
+
+ Condition                        screen  file               syslog        dir
+ --------------------------------+-------+------------------+-------------+---
+ -e (one-liners)                  y       -                  -             -
+ Scripts running as normal user   y       ~/NAME.log         -             -
+ Scripts running as root          y       /var/log/NAME.log  -             -
+ Daemons                          y       y                  -             -
+
+You can customize level from outside the script, using environment variables or
+command-line options (won't interfere with command-line processing modules like
+Getopt::Long etc):
 
  % DEBUG=1 script.pl
  % LOG_LEVEL=trace script.pl
