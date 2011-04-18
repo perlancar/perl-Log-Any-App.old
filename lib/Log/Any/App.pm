@@ -383,7 +383,7 @@ each output's category specification. For example, instead of doing this:
 you can do this instead:
 
  init(
-     -category_alias => {_fbb => [qw/Foo Bar Baz/]},
+     -category_alias => {-fbb => [qw/Foo Bar Baz/]},
      -file   => [category=>'-fbb', ...],
      -screen => [category=>'-fbb', ...],
  );
