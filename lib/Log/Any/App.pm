@@ -287,8 +287,9 @@ example below is a code to log to three files:
 
 =head2 Changing level of a certain module
 
-Suppose you want to shut up Foo, Bar::Baz, and Qux's logging because they are
-too noisy:
+Suppose you want to shut up logs from modules Foo, Bar::Baz, and Qux (and their
+submodules as well, e.g. Foo::Alpha, Bar::Baz::Beta::Gamma) because they are too
+noisy:
 
  use Log::Any::App '$log',
      -category_level => { Foo => 'off', 'Bar::Baz' => 'off', Qux => 'off' };
