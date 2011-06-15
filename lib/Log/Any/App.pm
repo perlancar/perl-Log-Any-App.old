@@ -1093,7 +1093,7 @@ sub _default_dir {
         category => '',
         pattern_style => 'plain',
         pattern => undef,
-        filename_pattern => 'pid-%{pid}-%Y-%m-%d-%H%M%S.txt',
+        filename_pattern => undef,
     };
 }
 
