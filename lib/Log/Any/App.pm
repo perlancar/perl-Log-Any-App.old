@@ -653,7 +653,7 @@ sub _gen_appender_config {
         "",
         "log4perl.appender.$apd_name = $class\n",
         (map { "log4perl.appender.$apd_name.$_ = $params->{$_}\n" }
-             keys %$params),
+             grep {defined $params->{$_}} keys %$params),
         "log4perl.appender.$apd_name.layout = PatternLayout\n",
         "log4perl.appender.$apd_name.layout.ConversionPattern = $ospec->{pattern}\n",
         ($filter ? "log4perl.appender.$apd_name.Filter = $filter\n" : ""),
