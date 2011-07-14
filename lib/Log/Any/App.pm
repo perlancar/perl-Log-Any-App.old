@@ -299,6 +299,7 @@ sub _parse_opts {
         dump => ($ENV{LOGANYAPP_DEBUG} ? 1:0),
         daemon => 0,
         category_alias => {},
+        level_flag_paths => [File::HomeDir->my_home, "/etc"],
     };
 
     my $i = 0;
@@ -313,7 +314,7 @@ sub _parse_opts {
         $i++;
     }
 
-    $spec->{level} = _set_level("", "");
+    $spec->{level} = _set_level("", "", $spec);
     if (!$spec->{level} && defined($opts{level})) {
         $spec->{level} = _check_level($opts{level}, "-level");
         _debug("Set general level to $spec->{level} (from -level)");
@@ -349,6 +350,11 @@ sub _parse_opts {
     if (defined $opts{name}) {
         $spec->{name} = $opts{name};
         delete $opts{name};
+    }
+
+    if (defined $opts{level_flag_paths}) {
+        $spec->{level_flag_paths} = $opts{level_flag_paths};
+        delete $opts{level_flag_paths};
     }
 
     if (defined $opts{daemon}) {
@@ -458,7 +464,7 @@ sub _parse_opt_OUTPUT {
 
 sub _default_file {
     my ($spec) = @_;
-    my $level = _set_level("file", "file");
+    my $level = _set_level("file", "file", $spec);
     if (!$level) {
         $level = $spec->{level};
         _debug("Set level of file to $level (general level)");
@@ -505,7 +511,7 @@ sub _parse_opt_file {
 
 sub _default_dir {
     my ($spec) = @_;
-    my $level = _set_level("dir", "dir");
+    my $level = _set_level("dir", "dir", $spec);
     if (!$level) {
         $level = $spec->{level};
         _debug("Set level of dir to $level (general level)");
@@ -540,7 +546,7 @@ sub _parse_opt_dir {
 
 sub _default_screen {
     my ($spec) = @_;
-    my $level = _set_level("screen", "screen");
+    my $level = _set_level("screen", "screen", $spec);
     if (!$level) {
         $level = $spec->{level};
         _debug("Set level of screen to $level (general level)");
@@ -566,7 +572,7 @@ sub _parse_opt_screen {
 
 sub _default_syslog {
     my ($spec) = @_;
-    my $level = _set_level("syslog", "syslog");
+    my $level = _set_level("syslog", "syslog", $spec);
     if (!$level) {
         $level = $spec->{level};
         _debug("Set level of syslog to $level (general level)");
@@ -643,7 +649,7 @@ sub _check_level {
 }
 
 sub _set_level {
-    my ($prefix, $which) = @_;
+    my ($prefix, $which, $spec) = @_;
     my $p_ = $prefix ? "${prefix}_" : "";
     my $P_ = $prefix ? uc("${prefix}_") : "";
     my $F_ = $prefix ? ucfirst("${prefix}_") : "";
@@ -720,6 +726,37 @@ sub _set_level {
                 $level = $_->[1];
                 $from = "\$ENV{$key}";
                 last SET;
+            }
+        }
+
+        for my $dir (@{$spec->{level_flag_paths}}) {
+            for (@label2level) {
+                my $filename = "$dir/$spec->{name}." . $P_ . "log_level";
+                my $exists = -f $filename;
+                my $content;
+                if ($exists) {
+                    open my($f), $filename;
+                    $content = <$f>;
+                    chomp($content) if defined($content);
+                    close $f;
+                }
+                _debug("Checking level flag file content $filename: ",
+                       (defined($content) ? $content : "(undef)"));
+                if (defined $content) {
+                    $level = _check_level($content,
+                                          "level flag file $filename");
+                    $from = $filename;
+                    last SET;
+                }
+
+                $filename = "$dir/$spec->{name}." . $P_ . uc($_->[0]);
+                $exists = -e $filename;
+                _debug("Checking level flag file $filename: ", ($exists ? 1:0));
+                if ($exists) {
+                    $level = $_->[1];
+                    $from = $filename;
+                    last SET;
+                }
             }
         }
 
@@ -907,7 +944,7 @@ priority:
 
 =item * environment variables (outside the script)
 
-=item * flag files (outside the script)
+=item * level flag files (outside the script)
 
 =item * variables in 'main' package (inside the script)
 
@@ -958,7 +995,7 @@ package variables (since they have the lowest priority):
  use Log::Any::App '$log';
  BEGIN { our $Log_Level = 'info' } # be more verbose by default
 
-Then you will still be able to use flag files or environment variables or
+Then you will still be able to use level flag files or environment variables or
 command-line options to override this setting.
 
 =head2 Changing per-output level
@@ -1011,8 +1048,8 @@ if you do this:
  BEGIN { our $Screen_Log_Level = 'off' }
 
 then by default screen logging is turned off but you will be able to override
-the screen log level using flag files or environment variables or command-line
-options (SCREEN_DEBUG, --screen-verbose, and so on).
+the screen log level using level flag files or environment variables or
+command-line options (SCREEN_DEBUG, --screen-verbose, and so on).
 
 =head2 Changing log level of cron scripts
 
@@ -1024,12 +1061,12 @@ changing crontab entries, e.g.:
  */5 * * * * DEBUG=1 foo
 
  # be silent
- */5 * * * * foo --quiet
+ */5 * * * * bar --quiet
 
-Another mechanism, flag file, is useful in this case. By doing:
+Another mechanism, level flag file, is useful in this case. By doing:
 
  $ echo debug > ~/foo.log_level
- # touch /etc/foo.QUIET
+ # touch /etc/bar.QUIET
 
 you can also change log levels without modifying your crontab.
 
@@ -1186,6 +1223,10 @@ module, right?)
 
 Change the program name. Default is taken from $0.
 
+=item -level_flag_paths => ARRAY OF STRING
+
+Edit level flag file locations. The default is [$homedir, "/etc"].
+
 =item -daemon => BOOL
 
 Declare that script is a daemon. Default is no. Aside from this, to declare that
@@ -1220,23 +1261,28 @@ certain categories/modules.
 Specify log level for all outputs. Each output can override this value. The
 default log level is determined as follow:
 
-If L<App::Options> is present, these keys are checked in B<%App::options>:
-B<log_level>, B<trace> (if true then level is C<trace>), B<debug> (if true then
-level is C<debug>), B<verbose> (if true then level is C<info>), B<quiet> (if
-true then level is C<error>).
+B<Search in command-line options>. If L<App::Options> is present, these keys are
+checked in B<%App::options>: B<log_level>, B<trace> (if true then level is
+C<trace>), B<debug> (if true then level is C<debug>), B<verbose> (if true then
+level is C<info>), B<quiet> (if true then level is C<error>).
 
 Otherwise, it will try to scrape @ARGV for the presence of B<--log-level>,
 B<--trace>, B<--debug>, B<--verbose>, or B<--quiet> (this usually works because
 Log::Any::App does this in the INIT phase, before you call L<Getopt::Long>'s
 GetOptions() or the like).
 
-Otherwise, it will look for environment variables: B<LOG_LEVEL>, B<QUIET>.
-B<VERBOSE>, B<DEBUG>, B<TRACE>.
+B<Search in environment variables>. Otherwise, it will look for environment
+variables: B<LOG_LEVEL>, B<QUIET>. B<VERBOSE>, B<DEBUG>, B<TRACE>.
 
-Otherwise, it will try to search for package variables in the C<main> namespace
-with names like C<$Log_Level> or C<$LOG_LEVEL> or C<$log_level>, C<$Quiet> or
-C<$QUIET> or C<$quiet>, C<$Verbose> or C<$VERBOSE> or C<$verbose>, C<$Trace> or
-C<$TRACE> or C<$trace>, C<$Debug> or C<$DEBUG> or C<$debug>.
+B<Search in level flag files>. Otherwise, it will look for existence of files
+with one of these names C<$NAME.QUIET>, C<$NAME.VERBOSE>, C<$NAME.TRACE>,
+C<$NAME.DEBUG>, or content of C<$NAME.log_level> in ~ or /etc.
+
+B<Search in main package variables>. Otherwise, it will try to search for
+package variables in the C<main> namespace with names like C<$Log_Level> or
+C<$LOG_LEVEL> or C<$log_level>, C<$Quiet> or C<$QUIET> or C<$quiet>, C<$Verbose>
+or C<$VERBOSE> or C<$verbose>, C<$Trace> or C<$TRACE> or C<$trace>, C<$Debug> or
+C<$DEBUG> or C<$debug>.
 
 If everything fails, it defaults to 'warn'.
 
@@ -1274,9 +1320,9 @@ directory and the final file path is directory appended with $NAME.log.
 Default rotating behaviour is no rotate (max_size = 0).
 
 Default level for file is the same as the global level set by B<-level>. But
-App::options, command line, environment, and package variables in main are also
-searched first (for B<FILE_LOG_LEVEL>, B<FILE_TRACE>, B<FILE_DEBUG>,
-B<FILE_VERBOSE>, B<FILE_QUIET>, and the similars).
+App::options, command line, environment, level flag file, and package variables
+in main are also searched first (for B<FILE_LOG_LEVEL>, B<FILE_TRACE>,
+B<FILE_DEBUG>, B<FILE_VERBOSE>, B<FILE_QUIET>, and the similars).
 
 =item -dir => 0 | 1|yes|true | PATH | {opts} | [{opts}, ...]
 
@@ -1311,9 +1357,9 @@ C<-name>.
 Default rotating parameters are: histories=1000, max_size=0, max_age=undef.
 
 Default level for dir logging is the same as the global level set by B<-level>.
-But App::options, command line, environment, and package variables in main are
-also searched first (for B<DIR_LOG_LEVEL>, B<DIR_TRACE>, B<DIR_DEBUG>,
-B<DIR_VERBOSE>, B<DIR_QUIET>, and the similars).
+But App::options, command line, environment, level flag file, and package
+variables in main are also searched first (for B<DIR_LOG_LEVEL>, B<DIR_TRACE>,
+B<DIR_DEBUG>, B<DIR_VERBOSE>, B<DIR_QUIET>, and the similars).
 
 =item -screen => 0 | 1|yes|true | {opts}
 
@@ -1333,9 +1379,10 @@ How Log::Any::App determines defaults for screen logging:
 Screen logging is turned on by default.
 
 Default level for screen logging is the same as the global level set by
-B<-level>. But App::options, command line, environment, and package variables in
-main are also searched first (for B<SCREEN_LOG_LEVEL>, B<SCREEN_TRACE>,
-B<SCREEN_DEBUG>, B<SCREEN_VERBOSE>, B<SCREEN_QUIET>, and the similars).
+B<-level>. But App::options, command line, environment, level flag file, and
+package variables in main are also searched first (for B<SCREEN_LOG_LEVEL>,
+B<SCREEN_TRACE>, B<SCREEN_DEBUG>, B<SCREEN_VERBOSE>, B<SCREEN_QUIET>, and the
+similars).
 
 Color can also be turned on/off using environment variable COLOR (if B<color>
 argument is not set).
@@ -1361,9 +1408,10 @@ otherwise the default is off.
 Ident is program's name by default ($0, or C<-name>).
 
 Default level for syslog logging is the same as the global level set by
-B<-level>. But App::options, command line, environment, and package variables in
-main are also searched first (for B<SYSLOG_LOG_LEVEL>, B<SYSLOG_TRACE>,
-B<SYSLOG_DEBUG>, B<SYSLOG_VERBOSE>, B<SYSLOG_QUIET>, and the similars).
+B<-level>. But App::options, command line, environment, level flag file, and
+package variables in main are also searched first (for B<SYSLOG_LOG_LEVEL>,
+B<SYSLOG_TRACE>, B<SYSLOG_DEBUG>, B<SYSLOG_VERBOSE>, B<SYSLOG_QUIET>, and the
+similars).
 
 =item -dump => BOOL
 
