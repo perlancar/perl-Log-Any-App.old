@@ -1014,6 +1014,25 @@ then by default screen logging is turned off but you will be able to override
 the screen log level using flag files or environment variables or command-line
 options (SCREEN_DEBUG, --screen-verbose, and so on).
 
+=head2 Changing log level of cron scripts
+
+Environment variables and command-line options allow changing log level without
+modifying the script. But for scripts specified in crontab, they still require
+changing crontab entries, e.g.:
+
+ # turn on debugging
+ */5 * * * * DEBUG=1 foo
+
+ # be silent
+ */5 * * * * foo --quiet
+
+Another mechanism, flag file, is useful in this case. By doing:
+
+ $ echo debug > ~/foo.log_level
+ # touch /etc/foo.QUIET
+
+you can also change log levels without modifying your crontab.
+
 =head2 Changing log file name/location
 
 By default Log::Any::App will log to file to ~/$NAME.log (or /var/log/$NAME.log
