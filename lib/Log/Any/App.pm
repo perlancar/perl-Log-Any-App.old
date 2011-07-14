@@ -292,6 +292,7 @@ sub _parse_args {
 sub _parse_opts {
     my ($args, $caller) = @_;
     $args //= []; # if we don't import(), we never get args
+    _debug("parse_opts: args = [".join(", ", @$args)."]");
 
     my $spec = {
         name => _basename($0),
@@ -312,6 +313,16 @@ sub _parse_opts {
         $arg = $args->[$i];
         $opts{$opt} = $arg;
         $i++;
+    }
+
+    if (defined $opts{name}) {
+        $spec->{name} = $opts{name};
+        delete $opts{name};
+    }
+
+    if (defined $opts{level_flag_paths}) {
+        $spec->{level_flag_paths} = $opts{level_flag_paths};
+        delete $opts{level_flag_paths};
     }
 
     $spec->{level} = _set_level("", "", $spec);
@@ -345,16 +356,6 @@ sub _parse_opts {
     if (defined $opts{init}) {
         $spec->{init} = $opts{init};
         delete $opts{init};
-    }
-
-    if (defined $opts{name}) {
-        $spec->{name} = $opts{name};
-        delete $opts{name};
-    }
-
-    if (defined $opts{level_flag_paths}) {
-        $spec->{level_flag_paths} = $opts{level_flag_paths};
-        delete $opts{level_flag_paths};
     }
 
     if (defined $opts{daemon}) {
@@ -650,6 +651,7 @@ sub _check_level {
 
 sub _set_level {
     my ($prefix, $which, $spec) = @_;
+    #use Data::Dumper; print Dumper $spec;
     my $p_ = $prefix ? "${prefix}_" : "";
     my $P_ = $prefix ? uc("${prefix}_") : "";
     my $F_ = $prefix ? ucfirst("${prefix}_") : "";

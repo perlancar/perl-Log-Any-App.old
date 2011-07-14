@@ -131,7 +131,7 @@ while (my ($k, $v) = each %vars) {
 my @lfftests = (
     {ext => "DEBUG", level => "debug"},
     {ext => "FILE_VERBOSE", level => "warn", file_level => "info"},
-    {ext => "log_level", content => "quiet", level => "error"},
+    {ext => "log_level", content => "error", level => "error"},
     {ext => "SCREEN_log_level", content => "trace", level => "warn",
      screen_level => "trace"},
 );
@@ -148,7 +148,6 @@ for my $test (@lfftests) {
     $args{$_} = $test->{$_} for grep {/_level$/} keys %$test;
     test_init(%args);
     unlink $flag_file or die "Can't unlink flag file $flag_file: $!";
-    exit;
 }
 #chdir "/" if Test::More->builder->is_passing;
 
