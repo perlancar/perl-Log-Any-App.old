@@ -893,17 +893,41 @@ logs in your application (only in the modules).
 
 =head2 Changing logging level
 
-Changing logging level can be done from the script or outside the script. From
-the script:
+Since one of the most commonly tweaked logging setting is level (for example:
+increasing level when debugging problems), Log::Any::App provides several
+mechanisms to change log level, either from the script or from outside the
+script, for your convenience. Below are the mechanisms, ordered from highest
+priority:
+
+=over 4
+
+=item * import argument (inside the script)
+
+=item * command line arguments (outside the script)
+
+=item * environment variables (outside the script)
+
+=item * flag files (outside the script)
+
+=item * variables in 'main' package (inside the script)
+
+=back
+
+These mechanisms are explained in more details in the documentation for the
+B<init()> function. But below are some examples.
+
+To change level from inside the script:
 
  use Log::Any::App '$log', -level => 'debug';
 
-but oftentimes what you want is changing level without modifying the script
-itself.
+This is useful if you want a fixed level that cannot be overriden by other
+mechanisms (since setting level using import argument has the highest priority).
+But oftentimes what you want is changing level without modifying the script
+itself. Thereby, just write:
 
  use Log::Any::App '$log';
 
-and then you can use environment variable:
+and then you can use environment variables to change level:
 
  TRACE=1 script.pl;         # setting level to trace
  DEBUG=1 script.pl;         # setting level to debug
@@ -919,21 +943,23 @@ or command-line options:
  script.pl --quiet
  script.pl --log_level=debug;   # '--log-level debug' will also do
 
-Log::Any::App won't consume the command-line options from @ARGV and thus won't
-interfere with command-line processing modules like L<Getopt::Long> or
-L<App::Options>. You might want to define these options in your option
-processing module though, or it might complain about unknown options. Or
-alternatively you can use environment variables instead.
+Regarding command-line options: Log::Any::App won't consume the command-line
+options from @ARGV and thus won't interfere with command-line processing modules
+like L<Getopt::Long> or L<App::Options>. If you use a command-line processing
+module and plan to use command-line options to set level, you might want to
+define these level options, or your command-line processing module will complain
+about unknown options.
 
 =head2 Changing default level
 
-The default log level is 'warn'. You can change this using:
+The default log level is 'warn'. To change the default level, you can use 'main'
+package variables (since they have the lowest priority):
 
  use Log::Any::App '$log';
- BEGIN { our $Log_Level = 'info' }
+ BEGIN { our $Log_Level = 'info' } # be more verbose by default
 
-and then you can still use environment or command-line options to override the
-setting.
+Then you will still be able to use flag files or environment variables or
+command-line options to override this setting.
 
 =head2 Changing per-output level
 
@@ -950,10 +976,9 @@ default 'warn' level:
  script.pl --screen-debug
  script.pl --screen-trace=1
  script.pl --screen-log-level=info
- # and so on
 
 Similarly, to set only file level, use FILE_VERBOSE, FILE_LOG_LEVEL,
---file-trace, etc.
+--file-trace, and so on.
 
 =head2 Setting default per-output level
 
@@ -979,21 +1004,21 @@ or:
 
  use Log::Any::App '$log', -screen => {level=>'off'};
 
-and this won't allow it to be reenabled from outside the script. However if you
-do this:
+and this won't allow the output to be reenabled from outside the script. However
+if you do this:
 
  use Log::Any::App;
  BEGIN { our $Screen_Log_Level = 'off' }
 
 then by default screen logging is turned off but you will be able to override
-the screen log level using environment or command-line options (SCREEN_DEBUG,
---screen-verbose, and so on).
+the screen log level using flag files or environment variables or command-line
+options (SCREEN_DEBUG, --screen-verbose, and so on).
 
 =head2 Changing log file name/location
 
-By default Log::Any::App will use ~/$NAME.log (or /var/log/$NAME.log if script
-is running as root), where $NAME is taken from the basename of $0. But this can
-be changed using:
+By default Log::Any::App will log to file to ~/$NAME.log (or /var/log/$NAME.log
+if script is running as root), where $NAME is taken from the basename of $0. But
+this can be changed using:
 
  use Log::Any::App '$log', -name => 'myprog';
 
@@ -1088,8 +1113,15 @@ screen:
 =head2 Preventing logging level to be changed from outside the script
 
 Sometimes, for security/audit reasons, you don't want to allow script caller to
-change logging level. To do so, just specify the 'level' option in the script
-during 'use' statement.
+change logging level. As explained previously, you can use the 'level' import
+argument (the highest priority of level-setting):
+
+ use Log::Any::App '$log', -level => 'debug'; # always use debug level
+
+TODO: Allow something like 'debug+' to allow other mechanisms to *increase* the
+level but not decrease it. Or 'debug-' to allow other mechanisms to decrease
+level but not increase it. And finally 'debug,trace' to specify allowable levels
+(is this necessary?)
 
 =head2 Debugging
 
