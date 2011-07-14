@@ -753,7 +753,8 @@ sub _set_level {
 
                 $filename = "$dir/$spec->{name}." . $P_ . uc($_->[0]);
                 $exists = -e $filename;
-                _debug("Checking level flag file $filename: ", ($exists ? 1:0));
+                _debug("Checking level flag file $filename: ",
+                       ($exists ? "EXISTS" : 0));
                 if ($exists) {
                     $level = $_->[1];
                     $from = $filename;
