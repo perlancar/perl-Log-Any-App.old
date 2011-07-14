@@ -9,7 +9,7 @@ use strict;
 use warnings;
 
 use Log::Any::App -dir => 0, -file => 0, -screen => 0, -syslog => 0, -init => 0;
-use Test::More tests => 68;
+use Test::More;
 
 test_init(
     name => 'default',
@@ -204,3 +204,4 @@ test_init(
 # XXX setting general level via app::options
 # XXX setting output level via app::options
 
+done_testing();
