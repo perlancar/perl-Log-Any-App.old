@@ -42,6 +42,17 @@ sub _ifdef {
     defined($a) ? $a : $b;
 }
 
+# m=multi, j=as json (except the last default)
+sub _ifdefmj {
+    require JSON;
+
+    my $def = pop @_;
+    for (@_) {
+        return JSON::decode_json($_) if defined($_);
+    }
+    $def;
+}
+
 sub init {
     return if $init_called++;
 
@@ -310,7 +321,7 @@ sub _parse_opts {
         init => 1,
         dump => ($ENV{LOGANYAPP_DEBUG} ? 1:0),
         daemon => 0,
-        category_alias => {},
+        category_alias => _ifdefmj($ENV{LOG_CATEGORY_ALIAS}, {}),
         level_flag_paths => [File::HomeDir->my_home, "/etc"],
     };
 
@@ -483,7 +494,9 @@ sub _default_file {
     }
     return {
         level => $level,
-        category_level => $spec->{category_level},
+        category_level => _ifdefmj($ENV{FILE_LOG_CATEGORY_LEVEL},
+                                   $ENV{LOG_CATEGORY_LEVEL},
+                                   $spec->{category_level}),
         path => $> ? File::Spec->catfile(File::HomeDir->my_home, "$spec->{name}.log") :
             "/var/log/$spec->{name}.log", # XXX and on Windows?
         max_size => undef,
@@ -530,7 +543,9 @@ sub _default_dir {
     }
     return {
         level => $level,
-        category_level => $spec->{category_level},
+        category_level => _ifdefmj($ENV{DIR_LOG_CATEGORY_LEVEL},
+                                   $ENV{LOG_CATEGORY_LEVEL},
+                                   $spec->{category_level}),
         path => $> ? File::Spec->catfile(File::HomeDir->my_home, "log", $spec->{name}) :
             "/var/log/$spec->{name}", # XXX and on Windows?
         max_size => undef,
@@ -567,7 +582,9 @@ sub _default_screen {
         color => _ifdef($ENV{COLOR}, (-t STDOUT)),
         stderr => 1,
         level => $level,
-        category_level => $spec->{category_level},
+        category_level => _ifdefmj($ENV{SCREEN_LOG_CATEGORY_LEVEL},
+                                   $ENV{LOG_CATEGORY_LEVEL},
+                                   $spec->{category_level}),
         category => '',
         pattern_style => ($ENV{LOG_SHOW_CATEGORY} ? 'cat_':'') . 'script_short',
         pattern => undef,
@@ -591,7 +608,9 @@ sub _default_syslog {
     }
     return {
         level => $level,
-        category_level => $spec->{category_level},
+        category_level => _ifdefmj($ENV{SYSLOG_LOG_CATEGORY_LEVEL},
+                                   $ENV{LOG_CATEGORY_LEVEL},
+                                   $spec->{category_level}),
         ident => $spec->{name},
         facility => 'daemon',
         pattern_style => ($ENV{LOG_SHOW_CATEGORY} ? 'cat_':'') . 'syslog',
@@ -1264,11 +1283,21 @@ you can do this instead:
      -screen => [category=>'-fbb', ...],
  );
 
+You can also specify this from the environment variable LOG_CATEGORY_ALIAS using
+JSON encoding, e.g.
+
+ LOG_CATEGORY_ALIAS='{"-fbb":["Foo","Bar","Baz"]}'
+
 =item -category_level => {CATEGORY=>LEVEL, ...}
 
 Specify per-category level. Categories not mentioned on this will use the
 general level (-level). This can be used to increase or decrease logging on
 certain categories/modules.
+
+You can also specify this from the environment variable LOG_CATEGORY_LEVEL using
+JSON encoding, e.g.
+
+ LOG_CATEGORY_LEVEL='{"-fbb":"off"}'
 
 =item -level => 'trace'|'debug'|'info'|'warn'|'error'|'fatal'|'off'
 
@@ -1338,6 +1367,8 @@ App::options, command line, environment, level flag file, and package variables
 in main are also searched first (for B<FILE_LOG_LEVEL>, B<FILE_TRACE>,
 B<FILE_DEBUG>, B<FILE_VERBOSE>, B<FILE_QUIET>, and the similars).
 
+You can also specify category level from environment FILE_LOG_CATEGORY_LEVEL.
+
 =item -dir => 0 | 1|yes|true | PATH | {opts} | [{opts}, ...]
 
 Log messages using L<Log::Dispatch::Dir>. Each message is logged into separate
@@ -1375,6 +1406,8 @@ But App::options, command line, environment, level flag file, and package
 variables in main are also searched first (for B<DIR_LOG_LEVEL>, B<DIR_TRACE>,
 B<DIR_DEBUG>, B<DIR_VERBOSE>, B<DIR_QUIET>, and the similars).
 
+You can also specify category level from environment DIR_LOG_CATEGORY_LEVEL.
+
 =item -screen => 0 | 1|yes|true | {opts}
 
 Log messages using L<Log::Log4perl::Appender::ScreenColoredLevels>.
@@ -1401,6 +1434,8 @@ similars).
 Color can also be turned on/off using environment variable COLOR (if B<color>
 argument is not set).
 
+You can also specify category level from environment SCREEN_LOG_CATEGORY_LEVEL.
+
 =item -syslog => 0 | 1|yes|true | {opts}
 
 Log messages using L<Log::Dispatch::Syslog>.
@@ -1426,6 +1461,8 @@ B<-level>. But App::options, command line, environment, level flag file, and
 package variables in main are also searched first (for B<SYSLOG_LOG_LEVEL>,
 B<SYSLOG_TRACE>, B<SYSLOG_DEBUG>, B<SYSLOG_VERBOSE>, B<SYSLOG_QUIET>, and the
 similars).
+
+You can also specify category level from environment SYSLOG_LOG_CATEGORY_LEVEL.
 
 =item -dump => BOOL
 
