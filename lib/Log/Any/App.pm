@@ -1,5 +1,7 @@
 package Log::Any::App;
 
+# i need this to run on centos 5.x. otherwise all my other servers are debian
+# 5.x and 6.x+ (perl 5.010).
 use 5.008;
 use strict;
 use warnings;
