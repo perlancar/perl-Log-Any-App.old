@@ -28,6 +28,9 @@ my %PATTERN_STYLES = (
     daemon            => '[pid %P] [%d] %m%n',
     syslog            => '[pid %p] %m',
 );
+for (keys %PATTERN_STYLES) {
+    $PATTERN_STYLES{"cat_$_"} = "[cat %c]$PATTERN_STYLES{$_}";
+}
 
 my $init_args;
 our $init_called;
@@ -488,7 +491,7 @@ sub _default_file {
         date_pattern => undef,
         tz => undef,
         category => '',
-        pattern_style => 'daemon',
+        pattern_style => ($ENV{LOG_SHOW_CATEGORY} ? 'cat_':'') . 'daemon',
         pattern => undef,
     };
 }
@@ -534,7 +537,7 @@ sub _default_dir {
         max_age => undef,
         histories => undef,
         category => '',
-        pattern_style => 'plain',
+        pattern_style => ($ENV{LOG_SHOW_CATEGORY} ? 'cat_':'') . 'plain',
         pattern => undef,
         filename_pattern => undef,
     };
@@ -566,7 +569,7 @@ sub _default_screen {
         level => $level,
         category_level => $spec->{category_level},
         category => '',
-        pattern_style => 'script_short',
+        pattern_style => ($ENV{LOG_SHOW_CATEGORY} ? 'cat_':'') . 'script_short',
         pattern => undef,
     };
 }
@@ -591,7 +594,7 @@ sub _default_syslog {
         category_level => $spec->{category_level},
         ident => $spec->{name},
         facility => 'daemon',
-        pattern_style => 'syslog',
+        pattern_style => ($ENV{LOG_SHOW_CATEGORY} ? 'cat_':'') . 'syslog',
         pattern => undef,
         category => '',
     };
@@ -1474,6 +1477,12 @@ C<pattern_style> instead of directly specifying C<pattern>. example:
 
                 Equivalent to pattern:
                 '[pid %p] %m'
+
+For each of the above there are also C<cat_XXX> (e.g. C<cat_script_long>) which
+are the same as XXX but with C<[cat %c]> in front of the pattern. It is used
+mainly to show categories and then filter by categories. You can turn picking
+default pattern style with category using environment variable
+LOG_SHOW_CATEGORY.
 
 If you have a favorite pattern style, please do share them.
 
