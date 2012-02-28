@@ -1206,6 +1206,34 @@ screen:
      -file   => "/var/log/foo",           # uses general -category_level
      -screen => { category_level => {} }; # overrides general -category_level
 
+You can also do this from the outside the script using environment variable,
+which is more flexible. Encode data structure using JSON:
+
+ % LOG_SHOW_CATEGORY=1 \
+   LOG_CATEGORY_ALIAS='{"-noisy":["Foo","Bar::Baz","Quz"]}' \
+   LOG_CATEGORY_LEVEL='{"-noisy":"off"}' script.pl ...
+
+=head2 Displaying category name
+
+ % LOG_SHOW_CATEGORY=1 script.pl ...
+
+Now instead of:
+
+ [25] Starting baz ritual ...
+
+now log messages will be prefixed with category:
+
+ [cat Foo.Bar][25] Starting baz ritual ...
+
+=head2 Displaying location name
+
+ % LOG_SHOW_LOCATION=1 script.pl ...
+
+Now log messages will be prefixed with location (function/file/line number)
+information:
+
+ [loc Foo::Bar lib/Foo/Bar.pm (12)][25] Starting baz ritual ...
+
 =head2 Preventing logging level to be changed from outside the script
 
 Sometimes, for security/audit reasons, you don't want to allow script caller to
