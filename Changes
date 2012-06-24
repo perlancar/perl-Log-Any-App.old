@@ -1,5 +1,14 @@
 Revision history for Log-Any-App
 
+0.38     2012-06-24 (SHARYANTO)
+
+         [ENHANCEMENTS]
+
+         Add option -log to allow users to disable Log::Any::App in programs
+         using environment variable (e.g. running 'LOG=1 /path/to/program' in
+         shell).
+
+
 0.37     2012-02-28 (SHARYANTO)
 
          [ENHANCEMENTS]
