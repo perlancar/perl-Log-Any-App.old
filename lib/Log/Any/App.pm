@@ -6,16 +6,10 @@ use 5.008;
 use strict;
 use warnings;
 
-use Data::Dumper;
-use File::HomeDir;
 use File::Path qw(make_path);
 use File::Spec;
 use Log::Any 0.11;
 use Log::Any::Adapter;
-use Log::Log4perl;
-# use Log::Dispatch::Dir
-# use Log::Dispatch::FileRotate
-# use Log::Dispatch::Syslog
 
 # VERSION
 
@@ -254,6 +248,8 @@ sub _gen_l4p_config {
 }
 
 sub _init_log4perl {
+    require Log::Log4perl;
+
     my ($spec) = @_;
 
     # create intermediate directories for dir
@@ -270,6 +266,7 @@ sub _init_log4perl {
 
     my $config_str = _gen_l4p_config($spec);
     if ($spec->{dump}) {
+        require Data::Dumper;
         print "Log::Any::App configuration:\n",
             Data::Dumper->new([$spec])->Terse(1)->Dump;
         print "Log4perl configuration: <<EOC\n", $config_str, "EOC\n";
@@ -313,6 +310,8 @@ sub _parse_args {
 }
 
 sub _parse_opts {
+    require File::HomeDir;
+
     my ($args, $caller) = @_;
     $args = _ifdef($args, []); # if we don't import(), we never get args
     _debug("parse_opts: args = [".join(", ", @$args)."]");
@@ -493,6 +492,8 @@ sub _set_pattern_style {
 }
 
 sub _default_file {
+    require File::HomeDir;
+
     my ($spec) = @_;
     my $level = _set_level("file", "file", $spec);
     if (!$level) {
@@ -542,6 +543,8 @@ sub _parse_opt_file {
 }
 
 sub _default_dir {
+    require File::HomeDir;
+
     my ($spec) = @_;
     my $level = _set_level("dir", "dir", $spec);
     if (!$level) {
