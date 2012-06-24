@@ -55,7 +55,7 @@ sub init {
     $caller ||= caller();
 
     my $spec = _parse_opts($args, $caller);
-    _init_log4perl($spec) if $spec->{init};
+    _init_log4perl($spec) if $spec->{log} && $spec->{init};
     $spec;
 }
 
@@ -316,15 +316,6 @@ sub _parse_opts {
     $args = _ifdef($args, []); # if we don't import(), we never get args
     _debug("parse_opts: args = [".join(", ", @$args)."]");
 
-    my $spec = {
-        name => _basename($0),
-        init => 1,
-        dump => ($ENV{LOGANYAPP_DEBUG} ? 1:0),
-        daemon => 0,
-        category_alias => _ifdefmj($ENV{LOG_CATEGORY_ALIAS}, {}),
-        level_flag_paths => [File::HomeDir->my_home, "/etc"],
-    };
-
     my $i = 0;
     my %opts;
     while ($i < @$args) {
@@ -337,11 +328,23 @@ sub _parse_opts {
         $i++;
     }
 
+    my $spec = {};
+
+    $spec->{log} = $ENV{LOG} // 1;
+    if (defined $opts{log}) {
+        $spec->{log} = $opts{log};
+        delete $opts{log};
+    }
+    # exit as early as possible if we are not doing any logging
+    goto END_PARSE_OPTS unless $spec->{log};
+
+    $spec->{name} = _basename($0);
     if (defined $opts{name}) {
         $spec->{name} = $opts{name};
         delete $opts{name};
     }
 
+    $spec->{level_flag_paths} = [File::HomeDir->my_home, "/etc"];
     if (defined $opts{level_flag_paths}) {
         $spec->{level_flag_paths} = $opts{level_flag_paths};
         delete $opts{level_flag_paths};
@@ -357,6 +360,7 @@ sub _parse_opts {
     }
     delete $opts{level};
 
+    $spec->{category_alias} = _ifdefmj($ENV{LOG_CATEGORY_ALIAS}, {});
     if (defined $opts{category_alias}) {
         die "category_alias must be a hashref"
             unless ref($opts{category_alias}) eq 'HASH';
@@ -375,17 +379,20 @@ sub _parse_opts {
         delete $opts{category_level};
     }
 
+    $spec->{init} = 1;
     if (defined $opts{init}) {
         $spec->{init} = $opts{init};
         delete $opts{init};
     }
 
+    $spec->{daemon} = 0;
     if (defined $opts{daemon}) {
         $spec->{daemon} = $opts{daemon};
         $is_daemon = $opts{daemon};
         delete $opts{daemon};
     }
 
+    $spec->{dump} = $ENV{LOGANYAPP_DEBUG};
     if (defined $opts{dump}) {
         $spec->{dump} = 1;
         delete $opts{dump};
@@ -409,10 +416,11 @@ sub _parse_opts {
 
     if (keys %opts) {
         die "Unknown option(s) ".join(", ", keys %opts)." Known opts are: ".
-            "name, level, category_level, category_alias, dump, init, ".
+            "log, name, level, category_level, category_alias, dump, init, ".
                 "file, dir, screen, syslog";
     }
 
+  END_PARSE_OPTS:
     #use Data::Dumper; print Dumper $spec;
     $spec;
 }
@@ -1282,6 +1290,14 @@ in runtime phase, do this:
 Arguments to init can be one or more of:
 
 =over 4
+
+=item -log => BOOL
+
+Whether to do log at all. Default is from LOG environment variable, or 1. This
+option is only to allow users to disable Log::Any::App (thus speeding up startup
+by avoiding loading Log4perl, etc) by passing LOG=1 environment when running
+programs. However, if you explicitly set this option to 1, Log::Any::App cannot
+be disabled this way.
 
 =item -init => BOOL
 
