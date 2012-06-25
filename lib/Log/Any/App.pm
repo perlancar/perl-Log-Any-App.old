@@ -85,6 +85,7 @@ sub _gen_appender_config {
         $class = "Log::Log4perl::Appender::" .
             ($ospec->{color} ? "ScreenColoredLevels" : "Screen");
         $params->{stderr}  = $ospec->{stderr} ? 1:0;
+        $params->{"color.WARN"} = "bold blue"; # blue on black is so unreadable
     } elsif ($name =~ /^syslog/i) {
         $class = "Log::Dispatch::Syslog";
         $params->{mode}     = 'append';
