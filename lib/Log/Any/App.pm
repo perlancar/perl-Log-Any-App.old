@@ -1588,6 +1588,54 @@ LOG_SHOW_LOCATION.
 If you have a favorite pattern style, please do share them.
 
 
+=head1 ENVIRONMENT
+
+Below is summary of environment variables used.
+
+Turning on/off logging:
+
+ LOG (bool)
+
+For setting general level:
+
+ TRACE (bool)       setting general level to trace
+ DEBUG (bool)       setting general level to debug
+ VERBOSE (bool)     setting general level to info
+ QUIET (bool)       setting general level to error (turn off warnings)
+ LOG_LEVEL (str)
+
+Setting per-output level:
+
+ FILE_TRACE, FILE_DEBUG, FILE_VERBOSE, FILE_QUIET, FILE_LOG_LEVEL
+ SCREEN_TRACE and so on
+ DIR_TRACE and so on
+ SYSLOG_TRACE and so on
+
+Setting per-category level:
+
+ LOG_CATEGORY_LEVEL (hash, json)
+ LOG_CATEGORY_ALIAS (hash, json)
+
+Setting per-output, per-category level:
+
+ FILE_LOG_CATEGORY_LEVEL
+ SCREEN_LOG_CATEGORY_LEVEL
+ and so on
+
+Controlling extra fields to log:
+
+ LOG_SHOW_LOCATION
+ LOG_SHOW_CATEGORY
+
+Force-enable or disable color:
+
+ COLOR (bool)
+
+Turn on Log::Any::App's debugging:
+
+ LOGANYAPP_DEBUG (bool)
+
+
 =head1 FAQ
 
 =head2 Why?
