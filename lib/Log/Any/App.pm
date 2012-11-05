@@ -1189,7 +1189,7 @@ example below is a code to log to three files:
                "/var/log/log1",
                {path=>"/var/log/debug_foo", category=>'Foo', level=>'debug'}];
 
-=head2 Changing level of a certain module
+=head2 Changing level of certain module(s)
 
 Suppose you want to shut up logs from modules Foo, Bar::Baz, and Qux (and their
 submodules as well, e.g. Foo::Alpha, Bar::Baz::Beta::Gamma) because they are too
@@ -1227,6 +1227,13 @@ which is more flexible. Encode data structure using JSON:
  % LOG_SHOW_CATEGORY=1 \
    LOG_CATEGORY_ALIAS='{"-noisy":["Foo","Bar::Baz","Quz"]}' \
    LOG_CATEGORY_LEVEL='{"-noisy":"off"}' script.pl ...
+
+=head2 Only displaying log from certain module(s)
+
+Use a combination of LOG_LEVEL and LOG_CATEGORY_LEVEL. For example:
+
+ % LOG_LEVEL=off LOG_CATEGORY_LEVEL='{"Foo.Bar":"trace", "Baz":"info"}' \
+   script.pl ...
 
 =head2 Displaying category name
 
